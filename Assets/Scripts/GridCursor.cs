@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class GridCursor : MonoBehaviour
 {
@@ -6,7 +7,6 @@ public class GridCursor : MonoBehaviour
 
     private void Awake()
     {
-        // Kendi üzerindeki SpriteRenderer'ı otomatik bulur (sürüklemene gerek kalmaz)
         cursorSpriteRenderer = GetComponent<SpriteRenderer>();
     }
 
@@ -14,7 +14,6 @@ public class GridCursor : MonoBehaviour
     {
         if (GridManager.Instance == null) return;
 
-        // Z derinliği tıklamayı bozmasın diye farenin pozisyonunu sabitliyoruz
         Vector3 mouseScreenPos = Input.mousePosition;
         mouseScreenPos.z = Mathf.Abs(Camera.main.transform.position.z);
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(mouseScreenPos);
@@ -25,9 +24,8 @@ public class GridCursor : MonoBehaviour
         {
             cursorSpriteRenderer.enabled = true;
 
-            // İmleci tam karenin merkezine oturt
             Vector3 worldPos = GridManager.Instance.GetWorldPosition(gridPos);
-            worldPos.z = -1f; // Haritanın ve karakterin biraz üstünde görünsün
+            worldPos.z = -1f;
             transform.position = worldPos;
         }
         else

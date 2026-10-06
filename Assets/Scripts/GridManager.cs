@@ -1,4 +1,5 @@
-using System.Collections.Generic;
+using System.Collections;
+using System.Collections.Generic; 
 using UnityEngine;
 
 public class GridManager : MonoBehaviour
@@ -119,5 +120,48 @@ public class GridManager : MonoBehaviour
                 Gizmos.DrawWireCube(n.worldPosition, Vector3.one * (cellSize * 0.9f));
             }
         }
+    }
+    public List<Node> GetNodesInRange(Vector2Int startPos, int maxSteps, bool allowDiagonal = false)
+    {
+        List<Node> reachableNodes = new List<Node>();
+        Dictionary<Node, int> costs = new Dictionary<Node, int>();
+        Queue<Node> queue = new Queue<Node>();
+
+        Node startNode = GetNode(startPos);
+        if (startNode == null) return reachableNodes;
+
+        queue.Enqueue(startNode);
+        costs[startNode] = 0;
+
+        while (queue.Count > 0)
+        {
+            Node currentNode = queue.Dequeue();
+            reachableNodes.Add(currentNode);
+
+            int currentCost = costs[currentNode];
+
+            // Eğer maksimum menzile ulaştıysak bu yönde daha fazla ilerleme
+            if (currentCost >= maxSteps) continue;
+
+            foreach (Node neighbor in GetNeighbors(currentNode, allowDiagonal))
+            {
+                // Engel varsa atla
+                if (!neighbor.isWalkable) continue;
+
+                int newCost = currentCost + 1; // Her adım 1 AP/Menzil harcar
+
+                // Komşuya daha önce gitmediysek veya daha kısa bir yoldan ulaştıysak listeye ekle
+                if (!costs.ContainsKey(neighbor) || newCost < costs[neighbor])
+                {
+                    costs[neighbor] = newCost;
+                    if (!queue.Contains(neighbor))
+                    {
+                        queue.Enqueue(neighbor);
+                    }
+                }
+            }
+        }
+
+        return reachableNodes;
     }
 }
