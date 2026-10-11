@@ -2,20 +2,25 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(Unit))]
 public class UnitMovement : MonoBehaviour
 {
     [Header("Hareket Ayarları")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private bool allowDiagonalMovement = false;
 
-    [Header("Menzil (AP) Ayarları")]
-    [SerializeField] private int maxMoveRange = 4; // Karakter tek turda en fazla 4 kare gidebilir
-
     public Vector2Int CurrentGridPosition { get; private set; }
 
     private bool isMoving = false;
-    private bool isSelected = false; // Karakter şu an seçili mi?
-    private List<Node> reachableNodes = new List<Node>(); // Gidebileceği karelerin listesi
+    private bool isSelected = false;
+    private List<Node> reachableNodes = new List<Node>();
+
+    private Unit myUnit; // Karakterin verilerini (Can, Hareket, CPU) tutan referans
+
+    private void Awake()
+    {
+        myUnit = GetComponent<Unit>();
+    }
 
     private void Start()
     {
@@ -25,51 +30,65 @@ public class UnitMovement : MonoBehaviour
 
     private void Update()
     {
-        if (isMoving) return;
+        // Karakter hareket ediyorsa, sıra bizde değilse veya bu karakter düşmansa iptal et
+        if (isMoving || TurnManager.Instance.CurrentState != TurnState.PlayerTurn || !myUnit.isPlayerOwned) return;
 
+        // Farenin sol tuşuna tıklandığında
         if (Input.GetMouseButtonDown(0))
         {
+            // SAVAŞTA DEĞİLSEK: Her tıklamada hareketi ve CPU'yu fullüyoruz (Sınırsız gezinti)
+            if (!TurnManager.Instance.IsInCombat())
+            {
+                myUnit.OnTurnStart();
+            }
+
+            // Hareket puanı kalmadıysa tıklamayı iptal et
+            if (myUnit.currentMovement <= 0)
+            {
+                if (isSelected)
+                {
+                    isSelected = false;
+                    HighlightManager.Instance.ClearHighlights();
+                }
+                return;
+            }
+
             Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             Vector2Int clickedGridPos = GridManager.Instance.GetGridPosition(mouseWorldPos);
 
-            // 1. DURUM: Karakterin kendi üzerine tıklandıysa (Seçim Modu)
+            // DURUM 1: Kendi üzerine tıklandı (Seçim Modu)
             if (clickedGridPos == CurrentGridPosition)
             {
                 isSelected = true;
-
-                // Gidebileceği yerleri hesapla ve HighlightManager'a çizdir
-                reachableNodes = GridManager.Instance.GetNodesInRange(CurrentGridPosition, maxMoveRange, allowDiagonalMovement);
+                reachableNodes = GridManager.Instance.GetNodesInRange(CurrentGridPosition, myUnit.currentMovement, allowDiagonalMovement);
                 HighlightManager.Instance.ShowRange(reachableNodes);
-
-                Debug.Log("Karakter Seçildi. Gidebileceği kare sayısı: " + reachableNodes.Count);
             }
-            // 2. DURUM: Karakter seçiliyken haritada BAŞKA bir yere tıklandıysa
+            // DURUM 2: Seçiliyken başka yere tıklandı (Yürüme)
             else if (isSelected)
             {
                 Node clickedNode = GridManager.Instance.GetNode(clickedGridPos);
 
-                // Tıklanan yer menzil içindeyse oraya yürü
                 if (clickedNode != null && reachableNodes.Contains(clickedNode))
                 {
                     List<Node> path = AStarPathfinding.FindPath(CurrentGridPosition, clickedGridPos, allowDiagonalMovement);
                     if (path != null && path.Count > 0)
                     {
                         isSelected = false;
-                        HighlightManager.Instance.ClearHighlights(); // Yürümeye başlarken boyaları sil
+                        HighlightManager.Instance.ClearHighlights();
+
+                        TurnManager.Instance.SetBusy(); // Yürürken turu kilitle
                         StartCoroutine(MoveAlongPath(path));
                     }
                 }
                 else
                 {
-                    // Menzil dışına tıklandıysa seçimi iptal et (Vazgeçme)
                     isSelected = false;
                     HighlightManager.Instance.ClearHighlights();
-                    Debug.Log("Menzil dışı veya iptal.");
                 }
             }
         }
 
-        // Sağ tıklayarak da seçimi iptal edebilsin
+        // Sağ tık ile seçimi iptal et
         if (Input.GetMouseButtonDown(1) && isSelected)
         {
             isSelected = false;
@@ -80,6 +99,7 @@ public class UnitMovement : MonoBehaviour
     private IEnumerator MoveAlongPath(List<Node> path)
     {
         isMoving = true;
+        int stepsTaken = path.Count;
 
         foreach (Node node in path)
         {
@@ -101,6 +121,10 @@ public class UnitMovement : MonoBehaviour
             CurrentGridPosition = node.gridPosition;
         }
 
+        // Yürüme bittiğinde adımları düş (Bu sayede UI çizgileri sönecek)
+        myUnit.UseMovement(stepsTaken);
+
         isMoving = false;
+        TurnManager.Instance.ClearBusy();
     }
 }
