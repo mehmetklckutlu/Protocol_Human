@@ -5,6 +5,9 @@ EditorUserSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 4
   m_ConfigSettings:
+    GraphicsSettingsInspector_UserSettings:
+      value: 18134705175a055722080a3115371d4a0d55006876786860616b0471b8b07a68ffab74f9ee2a3a30300cea1a11320d0beb1a0c25f7060f494b4cdf1b18f3045e38cb5ad8
+      flags: 0
     QuickInstaller_com.unity.purchasing_installRecorded:
       value: 2550581500
       flags: 0
@@ -19,6 +22,12 @@ EditorUserSettings:
       flags: 0
     RecentlyUsedSceneGuid-2:
       value: 52090057510d0a5a5b5c592614760a4443151b7f2d7a70332b781960e6b9376f
+      flags: 0
+    RecentlyUsedSceneGuid-3:
+      value: 52545602500c5a0b5b0c597748275d4447164c297a7a76632c7a4f30bbb66739
+      flags: 0
+    RecentlyUsedSceneGuid-4:
+      value: 5b0801535c565a5f5e5d5d7b1577594412164b7a7d2b70612b2f4f62b5b16361
       flags: 0
     vcSharedLogLevel:
       value: 0d5e400f0650
