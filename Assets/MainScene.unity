@@ -3755,7 +3755,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 148391632}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2fe3f9800e955fe4391ca7e4479abb8f, type: 3}
+  m_Script: {fileID: 11500000, guid: 54459d2960e05d445915e976659a96ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GridManager
   gridSize: {x: 100, y: 100}
@@ -3763,7 +3763,7 @@ MonoBehaviour:
   gridOrigin: {x: -50, y: -50, z: 0}
   unwalkableLayer:
     serializedVersion: 2
-    m_Bits: 8
+    m_Bits: 0
 --- !u!4 &148391634
 Transform:
   m_ObjectHideFlags: 0
@@ -3792,6 +3792,7 @@ GameObject:
   - component: {fileID: 278661855}
   - component: {fileID: 278661856}
   - component: {fileID: 278661857}
+  - component: {fileID: 278661858}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -3882,11 +3883,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 278661852}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 566d83c23e5294a42b660c547e82dc04, type: 3}
+  m_Script: {fileID: 11500000, guid: b874f1c994df9be4cafb7e24375bfdea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitMovement
-  moveSpeed: 10
-  allowDiagonalMovement: 1
+  moveSpeed: 5
+  allowDiagonalMovement: 0
 --- !u!61 &278661856
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -3955,6 +3956,25 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &278661858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 278661852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e79ba95e03c7db458e85f6600a5d0cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unit
+  isPlayerOwned: 1
+  maxHealth: 120
+  currentHealth: 0
+  maxMovement: 5
+  currentMovement: 0
+  maxCPU: 4
+  currentCPU: 0
 --- !u!1 &326287105
 GameObject:
   m_ObjectHideFlags: 0
@@ -13858,7 +13878,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 07b863a4795a9804c8093ec1b6c7157b, type: 3}
+  m_Sprite: {fileID: 1544815930, guid: 361089087f3538549a25d0a3f8130021, type: 3}
   m_Color: {r: 0.5080245, g: 0.19344072, b: 0.5943396, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -13866,7 +13886,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
 --- !u!114 &1517957428
 MonoBehaviour:
@@ -13877,7 +13897,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1517957426}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 03df414df2c21974aa793c5054bdad82, type: 3}
+  m_Script: {fileID: 11500000, guid: b1348aa47310de646a0c2bbcccc3c2ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GridCursor
 --- !u!4 &1517957429
