@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic; 
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class GridManager : MonoBehaviour
 {
@@ -11,6 +12,14 @@ public class GridManager : MonoBehaviour
     [SerializeField] private float cellSize = 1f;
     [SerializeField] private Vector3 gridOrigin = Vector3.zero;
     [SerializeField] private LayerMask unwalkableLayer;
+
+    [Header("Tilemap ile Yürünebilirlik (isteğe bağlı)")]
+    [Tooltip("Doluysa: sadece bu Tilemap'te tile olan kareler yürünebilir olur (tile olmayan boşluk yürünemez).")]
+    [SerializeField] private Tilemap floorTilemap;
+    [Tooltip("Doluysa: bu Tilemap'te tile olan kareler (duvarlar) yürünemez olur.")]
+    [SerializeField] private Tilemap wallTilemap;
+    [Tooltip("Doluysa: bu Tilemap'te tile olan kareler (siper kutuları) yürünemez olur.")]
+    [SerializeField] private Tilemap coverTilemap;
 
     private Node[,] grid;
 
@@ -39,6 +48,14 @@ public class GridManager : MonoBehaviour
 
                 // Fizik kontrolü ile engelleri tespit etme (Box overlap)
                 bool isWalkable = !Physics2D.OverlapBox(worldPos, Vector2.one * (cellSize * 0.8f), 0f, unwalkableLayer);
+
+                // Tilemap'ten gelen kurallar (atanmadıysa eski davranış aynen sürer)
+                if (isWalkable && floorTilemap != null)
+                    isWalkable = floorTilemap.HasTile(floorTilemap.WorldToCell(worldPos));
+                if (isWalkable && wallTilemap != null)
+                    isWalkable = !wallTilemap.HasTile(wallTilemap.WorldToCell(worldPos));
+                if (isWalkable && coverTilemap != null)
+                    isWalkable = !coverTilemap.HasTile(coverTilemap.WorldToCell(worldPos));
 
                 grid[x, y] = new Node(gridPos, worldPos, isWalkable);
             }
