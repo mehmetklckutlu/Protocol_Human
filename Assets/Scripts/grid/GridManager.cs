@@ -23,6 +23,11 @@ public class GridManager : MonoBehaviour
 
     private Node[,] grid;
 
+    // Dışarıdan okunabilir grid bilgileri (FogOfWar vb. kullanır)
+    public Vector2Int GridSize => gridSize;
+    public float CellSize => cellSize;
+    public Vector3 GridOrigin => gridOrigin;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)

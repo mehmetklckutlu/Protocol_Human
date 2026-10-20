@@ -17,6 +17,7 @@ public class CardView : MonoBehaviour
     [Header("Renkler")]
     [SerializeField] private Color attackColor = new Color(0.85f, 0.3f, 0.3f);
     [SerializeField] private Color defenseColor = new Color(0.3f, 0.55f, 0.9f);
+    [SerializeField] private Color summonColor = new Color(0.3f, 0.75f, 0.4f);
     [SerializeField] private Color selectedColor = new Color(1f, 0.9f, 0.3f);
 
     public void Setup(CardData card, bool interactable, bool selected)
@@ -34,8 +35,9 @@ public class CardView : MonoBehaviour
 
         if (background != null)
         {
-            background.color = selected ? selectedColor
-                : (card.cardType == CardType.Attack ? attackColor : defenseColor);
+            Color typeColor = card.cardType == CardType.Attack ? attackColor
+                            : card.cardType == CardType.Defense ? defenseColor : summonColor;
+            background.color = selected ? selectedColor : typeColor;
         }
 
         if (button != null)

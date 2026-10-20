@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum CardType { Attack, Defense }
+public enum CardType { Attack, Defense, Summon }
 
 // Project penceresinde: sağ tık > Create > Kartlar > Kart  ile yeni kart oluşturulur
 [CreateAssetMenu(fileName = "YeniKart", menuName = "Kartlar/Kart")]
@@ -23,15 +23,23 @@ public class CardData : ScriptableObject
     [Tooltip("Sadece Defense kartlarında kullanılır: verilen kalkan miktarı.")]
     [Min(0)] public int shield = 15;
 
+    [Header("Müttefik Çağırma Kartı Ayarları")]
+    [Tooltip("Sadece Summon kartlarında: çağrılacak müttefik prefab'ı. Boşsa geçici kutu müttefik oluşur.")]
+    public GameObject allyPrefab;
+    [Tooltip("Sadece Summon kartlarında: geçici müttefikin canı.")]
+    [Min(1)] public int allyHealth = 60;
+
     // Kartın ana sayısı (UI'da büyük yazılır)
-    public int MainValue => cardType == CardType.Attack ? damage : shield;
+    public int MainValue => cardType == CardType.Attack ? damage
+                          : cardType == CardType.Defense ? shield
+                          : allyHealth;
 
     // Açıklama boşsa otomatik üretilir
     public string GetDescription()
     {
         if (!string.IsNullOrEmpty(description)) return description;
-        return cardType == CardType.Attack
-            ? $"{damage} hasar\nMenzil: {range}"
-            : $"{shield} kalkan";
+        if (cardType == CardType.Attack) return $"{damage} hasar\nMenzil: {range}";
+        if (cardType == CardType.Defense) return $"{shield} kalkan";
+        return $"Müttefik çağırır\nCan: {allyHealth}";
     }
 }

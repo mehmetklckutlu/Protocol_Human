@@ -98,6 +98,7 @@ public class CardManager : MonoBehaviour
         if (!CanPlay(card)) { NotifyHandChanged(); return; }
 
         if (card.cardType == CardType.Defense) PlayDefense(card);
+        else if (card.cardType == CardType.Summon) PlaySummon(card);
         else BeginTargeting(card);
     }
 
@@ -105,6 +106,7 @@ public class CardManager : MonoBehaviour
     {
         if (pendingAttackCard == null) return;
         pendingAttackCard = null;
+        ClearBarrelPreview();
         if (HighlightManager.Instance != null) HighlightManager.Instance.ClearHighlights();
         NotifyHandChanged();
     }
@@ -125,7 +127,8 @@ public class CardManager : MonoBehaviour
     private void BeginTargeting(CardData card)
     {
         List<Unit> targets = GetTargetsInRange(card);
-        if (targets.Count == 0)
+        List<ExplosiveBarrel> barrels = GetBarrelsInRange(card);
+        if (targets.Count == 0 && barrels.Count == 0)
         {
             Debug.Log("Menzilde düşman yok!");
             NotifyHandChanged();
@@ -139,6 +142,11 @@ public class CardManager : MonoBehaviour
         foreach (Unit t in targets)
         {
             Node n = GridManager.Instance.GetNode(GridManager.Instance.GetGridPosition(t.transform.position));
+            if (n != null) nodes.Add(n);
+        }
+        foreach (ExplosiveBarrel b in barrels)
+        {
+            Node n = GridManager.Instance.GetNode(b.Cell);
             if (n != null) nodes.Add(n);
         }
         HighlightManager.Instance.ShowRange(nodes);
@@ -155,6 +163,8 @@ public class CardManager : MonoBehaviour
             CancelTargeting();
             return;
         }
+
+        UpdateBarrelPreview();
 
         // Sağ tık: iptal
         if (Input.GetMouseButtonDown(1))
@@ -183,6 +193,15 @@ public class CardManager : MonoBehaviour
                 }
             }
 
+            foreach (ExplosiveBarrel barrel in GetBarrelsInRange(pendingAttackCard))
+            {
+                if (barrel.Cell == clickedPos)
+                {
+                    ExecuteBarrelAttack(pendingAttackCard, barrel);
+                    return;
+                }
+            }
+
             // Boş bir yere tıklandı: seçimi iptal et
             CancelTargeting();
         }
@@ -197,12 +216,132 @@ public class CardManager : MonoBehaviour
         Hand.Remove(card);
 
         pendingAttackCard = null;
+        ClearBarrelPreview();
         HighlightManager.Instance.ClearHighlights();
 
         // Hasar en sonda: düşman ölürse savaş bitebilir
         target.TakeDamage(card.damage);
 
         NotifyHandChanged();
+    }
+
+    private void ExecuteBarrelAttack(CardData card, ExplosiveBarrel barrel)
+    {
+        Unit attacker = GetActiveUnit();
+        if (attacker == null || barrel == null) { CancelTargeting(); return; }
+
+        attacker.UseCPU(card.cpuCost);
+        Hand.Remove(card);
+
+        pendingAttackCard = null;
+        ClearBarrelPreview();
+        HighlightManager.Instance.ClearHighlights();
+
+        barrel.Explode();
+        NotifyHandChanged();
+    }
+
+    // ---------- Müttefik çağırma ----------
+
+    private void PlaySummon(CardData card)
+    {
+        Unit caster = GetActiveUnit();
+        if (caster == null) return;
+
+        Vector2Int from = GridManager.Instance.GetGridPosition(caster.transform.position);
+        Vector2Int[] dirs = { Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down };
+        Vector2Int? spot = null;
+        foreach (Vector2Int d in dirs)
+        {
+            Vector2Int c = from + d;
+            Node n = GridManager.Instance.GetNode(c);
+            if (n == null || !n.isWalkable || IsOccupied(c)) continue;
+            spot = c;
+            break;
+        }
+
+        if (spot == null) { Debug.Log("Müttefik çağıracak boş kare yok!"); NotifyHandChanged(); return; }
+
+        caster.UseCPU(card.cpuCost);
+        Hand.Remove(card);
+
+        Vector3 pos = GridManager.Instance.GetWorldPosition(spot.Value);
+        GameObject ally;
+        if (card.allyPrefab != null)
+        {
+            ally = Instantiate(card.allyPrefab, pos, Quaternion.identity);
+        }
+        else
+        {
+            // Geçici kutu müttefik: yerinde durur, düşmanların hedefi olabilir
+            ally = new GameObject("Müttefik");
+            ally.transform.position = pos;
+            ally.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+            SpriteRenderer sr = ally.AddComponent<SpriteRenderer>();
+            sr.sprite = RuntimeArt.Square;
+            sr.color = new Color(0.3f, 0.85f, 0.45f);
+            sr.sortingOrder = 3;
+            Unit u = ally.AddComponent<Unit>();
+            u.isPlayerOwned = true;
+            u.maxHealth = card.allyHealth;
+            u.currentHealth = card.allyHealth;
+        }
+        NotifyHandChanged();
+    }
+
+    private bool IsOccupied(Vector2Int cell)
+    {
+        TurnManager tm = TurnManager.Instance;
+        foreach (Unit u in tm.playerUnits)
+            if (u != null && GridManager.Instance.GetGridPosition(u.transform.position) == cell) return true;
+        foreach (Unit u in tm.enemyUnits)
+            if (u != null && GridManager.Instance.GetGridPosition(u.transform.position) == cell) return true;
+        return false;
+    }
+
+    // ---------- Varil hedefleme ----------
+
+    private ExplosiveBarrel hoveredBarrel;
+
+    private List<ExplosiveBarrel> GetBarrelsInRange(CardData card)
+    {
+        List<ExplosiveBarrel> result = new List<ExplosiveBarrel>();
+        Unit attacker = GetActiveUnit();
+        if (attacker == null) return result;
+
+        Vector2Int from = GridManager.Instance.GetGridPosition(attacker.transform.position);
+        foreach (ExplosiveBarrel b in ExplosiveBarrel.All)
+        {
+            if (b == null) continue;
+            if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(b.Cell)) continue;
+            int dist = Mathf.Abs(from.x - b.Cell.x) + Mathf.Abs(from.y - b.Cell.y);
+            if (dist <= card.range) result.Add(b);
+        }
+        return result;
+    }
+
+    // Fare menzildeki varilin üstündeyse patlama alanını göster
+    private void UpdateBarrelPreview()
+    {
+        ExplosiveBarrel target = null;
+        if (pendingAttackCard != null && Camera.main != null &&
+            !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
+        {
+            Vector2Int cell = GridManager.Instance.GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
+            foreach (ExplosiveBarrel b in GetBarrelsInRange(pendingAttackCard))
+                if (b.Cell == cell) { target = b; break; }
+        }
+
+        if (target == hoveredBarrel) return;
+        if (hoveredBarrel != null) hoveredBarrel.HidePreview();
+        hoveredBarrel = target;
+        if (hoveredBarrel != null) hoveredBarrel.ShowPreview();
+    }
+
+    private void ClearBarrelPreview()
+    {
+        if (hoveredBarrel != null) hoveredBarrel.HidePreview();
+        hoveredBarrel = null;
     }
 
     // ---------- Yardımcılar ----------
@@ -234,6 +373,9 @@ public class CardManager : MonoBehaviour
             if (ai == null || !ai.isAwake) continue;
 
             Vector2Int to = GridManager.Instance.GetGridPosition(enemy.transform.position);
+
+            // Görüş dışındaki (sisli) düşman hedeflenemez
+            if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(to)) continue;
             int dist = Mathf.Abs(from.x - to.x) + Mathf.Abs(from.y - to.y);
             if (dist <= card.range) result.Add(enemy);
         }
