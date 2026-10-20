@@ -3,24 +3,28 @@
   "WorkspaceRootPath": "D:\\Github\\Protocol_Human\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\gridcursor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\gridcursor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\turn system\\turnorderui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\turn system\\turnorderui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\gridmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\gridmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\karakter\\enemyai.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\karakter\\enemyai.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\unitmovement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\unitmovement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\turn system\\turn manager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\turn system\\turn manager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Github\\Protocol_Human\\Assets\\Scripts\\HighlightManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\HighlightManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\karakter\\unitmovement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\karakter\\unitmovement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Github\\Protocol_Human\\Assets\\Scripts\\NewEmptyCSharpScript.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\NewEmptyCSharpScript.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\ui\\unitworldui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\ui\\unitworldui.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\Github\\Protocol_Human\\Assets\\Scripts\\Units.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Units.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{B4CD19DA-EE08-5225-FB19-1D0DFA4113DD}|Assembly-CSharp.csproj|d:\\github\\protocol_human\\assets\\scripts\\camera main.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -34,24 +38,76 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "NewEmptyCSharpScript.cs",
-              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\NewEmptyCSharpScript.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\NewEmptyCSharpScript.cs",
-              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\NewEmptyCSharpScript.cs",
-              "RelativeToolTip": "Assets\\Scripts\\NewEmptyCSharpScript.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACkAAAABAAAAAAAAAA==",
+              "DocumentIndex": 0,
+              "Title": "TurnOrderUI.cs",
+              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\turn system\\TurnOrderUI.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\turn system\\TurnOrderUI.cs",
+              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\turn system\\TurnOrderUI.cs",
+              "RelativeToolTip": "Assets\\Scripts\\turn system\\TurnOrderUI.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAQwGIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-06T17:17:29.84Z",
+              "WhenOpened": "2026-10-11T11:38:53.309Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 1,
+              "Title": "EnemyAI.cs",
+              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\karakter\\EnemyAI.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\karakter\\EnemyAI.cs",
+              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\karakter\\EnemyAI.cs",
+              "RelativeToolTip": "Assets\\Scripts\\karakter\\EnemyAI.cs",
+              "ViewState": "AgIAAEQAAAAAAAAAAAAcwIUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-11T10:38:47.883Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "UnitMovement.cs",
+              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\karakter\\UnitMovement.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\karakter\\UnitMovement.cs",
+              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\karakter\\UnitMovement.cs",
+              "RelativeToolTip": "Assets\\Scripts\\karakter\\UnitMovement.cs",
+              "ViewState": "AgIAAEYAAAAAAAAAAAAUwHYAAAA4AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-11T09:43:20.742Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "UnitWorldUI.cs",
+              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\UI\\UnitWorldUI.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\UnitWorldUI.cs",
+              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\UI\\UnitWorldUI.cs",
+              "RelativeToolTip": "Assets\\Scripts\\UI\\UnitWorldUI.cs",
+              "ViewState": "AgIAADUAAAAAAAAAAAAAAEQAAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-11T09:41:31.593Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Turn Manager.cs",
+              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\turn system\\Turn Manager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\turn system\\Turn Manager.cs",
+              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\turn system\\Turn Manager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\turn system\\Turn Manager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-11T09:38:25.224Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "camera Main.cs",
               "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\camera Main.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\camera Main.cs",
@@ -63,54 +119,15 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "GridCursor.cs",
-              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\GridCursor.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\GridCursor.cs",
-              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\GridCursor.cs",
-              "RelativeToolTip": "Assets\\Scripts\\GridCursor.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACMAAAABAAAAAAAAAA==",
+              "DocumentIndex": 5,
+              "Title": "Units.cs",
+              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\Units.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Units.cs",
+              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\Units.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Units.cs",
+              "ViewState": "AgIAAC8AAAAAAAAAAADwvyUAAAA4AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-06T15:48:48.561Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "UnitMovement.cs",
-              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\UnitMovement.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\UnitMovement.cs",
-              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\UnitMovement.cs",
-              "RelativeToolTip": "Assets\\Scripts\\UnitMovement.cs",
-              "ViewState": "AgIAABEAAAAAAAAAAAAMwCgAAACAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-06T15:42:21.272Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "GridManager.cs",
-              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\GridManager.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\GridManager.cs",
-              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\GridManager.cs",
-              "RelativeToolTip": "Assets\\Scripts\\GridManager.cs",
-              "ViewState": "AgIAAIEAAAAAAAAAAADwv6YAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-06T15:48:22.397Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "HighlightManager.cs",
-              "DocumentMoniker": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\HighlightManager.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\HighlightManager.cs",
-              "ToolTip": "D:\\Github\\Protocol_Human\\Assets\\Scripts\\HighlightManager.cs",
-              "RelativeToolTip": "Assets\\Scripts\\HighlightManager.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAABXAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-06T17:15:11.273Z",
+              "WhenOpened": "2026-10-11T09:34:47.192Z",
               "EditorCaption": ""
             }
           ]

@@ -1,11 +1,12 @@
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class TacticalCamera : MonoBehaviour
 {
     [Header("Karaktere Odaklanma (Focus)")]
-    [SerializeField] private Transform targetToFocus; // Odaklanılacak karakterin Transform'u
+    [SerializeField] private Transform targetToFocus;
     [SerializeField] private KeyCode focusKey = KeyCode.Space;
-    [SerializeField] private float focusSmoothTime = 0.25f; // Hedefe varış süresi (sn)
+    [SerializeField] private float focusSmoothTime = 0.25f;
 
     [Header("Kamera Kaydırma Hızı")]
     [SerializeField] private float panSpeed = 15f;
@@ -17,33 +18,58 @@ public class TacticalCamera : MonoBehaviour
     [SerializeField] private float minZoom = 3f;
     [SerializeField] private float maxZoom = 15f;
 
-    [Header("Harita Sınırları (Clamp)")]
-    [SerializeField] private Vector2 minLimits = new Vector2(-5f, -5f);
-    [SerializeField] private Vector2 maxLimits = new Vector2(25f, 25f);
+    [Header("Harita Sınırları (Tilemap)")]
+    [Tooltip("Zemin Tilemap'i. Kamera merkezi sadece boyalı tile'ların üzerinde gezebilir.")]
+    [SerializeField] private Tilemap boundsTilemap;
+    [Tooltip("Tile'ların dışına ne kadar taşılabileceği (dünya birimi). 0 = tam tile üzerinde kalır.")]
+    [SerializeField] private float edgeMargin = 0f;
 
     private Camera cam;
     private Vector3 dragOrigin;
     private bool isDragging = false;
     private bool isFocusing = false;
-    private Vector3 currentVelocity = Vector3.zero; // SmoothDamp için hız referansı
+    private Vector3 currentVelocity = Vector3.zero;
+
+    // Boyalı her tile'ın dünya uzayındaki dikdörtgeni
+    private readonly System.Collections.Generic.List<Rect> tileRects = new System.Collections.Generic.List<Rect>();
 
     private void Awake()
     {
         cam = GetComponent<Camera>();
+        RecalculateBounds();
+    }
+
+    // Tilemap'e sonradan tile eklenir/silinirse bunu çağır
+    public void RecalculateBounds()
+    {
+        tileRects.Clear();
+        if (boundsTilemap == null) return;
+
+        boundsTilemap.CompressBounds();
+        BoundsInt cells = boundsTilemap.cellBounds;
+
+        foreach (Vector3Int cell in cells.allPositionsWithin)
+        {
+            if (!boundsTilemap.HasTile(cell)) continue;
+
+            Vector3 min = boundsTilemap.CellToWorld(cell);
+            Vector3 max = boundsTilemap.CellToWorld(cell + new Vector3Int(1, 1, 0));
+            Vector2 lo = new Vector2(Mathf.Min(min.x, max.x), Mathf.Min(min.y, max.y));
+            Vector2 hi = new Vector2(Mathf.Max(min.x, max.x), Mathf.Max(min.y, max.y));
+            tileRects.Add(new Rect(lo.x - edgeMargin, lo.y - edgeMargin,
+                                   hi.x - lo.x + edgeMargin * 2f, hi.y - lo.y + edgeMargin * 2f));
+        }
     }
 
     private void Update()
     {
-        // 1. Space tuşuna basıldığında odaklanmayı başlat
         if (Input.GetKeyDown(focusKey) && targetToFocus != null)
         {
             isFocusing = true;
         }
 
-        // 2. Farenin orta tuşuyla sürükleme
         HandleMouseDrag();
 
-        // 3. Odaklanma durumu veya manuel kaydırma
         if (isFocusing)
         {
             SmoothFollowTarget();
@@ -57,7 +83,6 @@ public class TacticalCamera : MonoBehaviour
         ClampCameraPosition();
     }
 
-    // Karakteri yumuşakça merkeze alma
     private void SmoothFollowTarget()
     {
         if (targetToFocus == null)
@@ -67,11 +92,8 @@ public class TacticalCamera : MonoBehaviour
         }
 
         Vector3 targetPos = new Vector3(targetToFocus.position.x, targetToFocus.position.y, transform.position.z);
-
-        // Pürüzsüz geçiş (SmoothDamp)
         transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref currentVelocity, focusSmoothTime);
 
-        // Hedefe yeterince yaklaştıysa odaklanma modundan çık
         if (Vector2.Distance(transform.position, targetPos) < 0.05f)
         {
             isFocusing = false;
@@ -84,7 +106,7 @@ public class TacticalCamera : MonoBehaviour
         {
             dragOrigin = cam.ScreenToWorldPoint(Input.mousePosition);
             isDragging = true;
-            isFocusing = false; // Oyuncu haritayı tuttuğu an odaklanmayı kes
+            isFocusing = false;
         }
 
         if (Input.GetMouseButton(2))
@@ -116,7 +138,6 @@ public class TacticalCamera : MonoBehaviour
             if (Input.mousePosition.x >= Screen.width - edgeBorderThickness) direction.x += 1;
         }
 
-        // Oyuncu klavye veya fare kenarıyla hareket ettirirse odaklanmayı kes
         if (direction != Vector3.zero)
         {
             isFocusing = false;
@@ -134,19 +155,51 @@ public class TacticalCamera : MonoBehaviour
         }
     }
 
+    // Kamera merkezi boyalı tile'ların dışına çıkamaz; çıkarsa en yakın tile'a geri çekilir
     private void ClampCameraPosition()
     {
         Vector3 pos = transform.position;
-        pos.x = Mathf.Clamp(pos.x, minLimits.x, maxLimits.x);
-        pos.y = Mathf.Clamp(pos.y, minLimits.y, maxLimits.y);
+
+        if (tileRects.Count > 0)
+        {
+            Vector2 p = new Vector2(pos.x, pos.y);
+            float bestSqr = float.MaxValue;
+            Vector2 best = p;
+
+            for (int i = 0; i < tileRects.Count; i++)
+            {
+                Rect r = tileRects[i];
+                Vector2 q = new Vector2(Mathf.Clamp(p.x, r.xMin, r.xMax), Mathf.Clamp(p.y, r.yMin, r.yMax));
+                float sqr = (q - p).sqrMagnitude;
+                if (sqr < bestSqr)
+                {
+                    bestSqr = sqr;
+                    best = q;
+                    if (sqr == 0f) break; // zaten bir tile'ın üzerinde
+                }
+            }
+
+            pos.x = best.x;
+            pos.y = best.y;
+        }
+
         pos.z = -10f;
         transform.position = pos;
     }
 
-    // Kod üzerinden dinamik hedef değiştirmek isterseniz (ör. Tur sırası diğer karaktere geçtiğinde)
     public void SetTarget(Transform newTarget)
     {
         targetToFocus = newTarget;
         isFocusing = true;
     }
+
+#if UNITY_EDITOR
+    // Seçiliyken kameranın gezebileceği tile'ları sarı çerçeveyle gösterir
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        foreach (Rect r in tileRects)
+            Gizmos.DrawWireCube(r.center, new Vector3(r.width, r.height, 0f));
+    }
+#endif
 }
