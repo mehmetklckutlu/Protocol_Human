@@ -18,6 +18,9 @@ public class Unit : MonoBehaviour
     public int maxCPU = 4;
     public int currentCPU;
 
+    [Header("Kalkan")]
+    public int currentShield;
+
     // UI'ın değerleri anında güncellemesi için olay (Event)
     public event Action OnStatsChanged;
 
@@ -40,11 +43,26 @@ public class Unit : MonoBehaviour
     {
         currentMovement = maxMovement;
         currentCPU = maxCPU;
+        currentShield = 0; // Kalkan her tur başında sıfırlanır
+        NotifyUI();
+    }
+
+    public void AddShield(int amount)
+    {
+        currentShield += amount;
         NotifyUI();
     }
 
     public void TakeDamage(int damage)
     {
+        // Önce kalkan eriyor, kalan hasar cana gidiyor
+        if (currentShield > 0)
+        {
+            int absorbed = Mathf.Min(currentShield, damage);
+            currentShield -= absorbed;
+            damage -= absorbed;
+        }
+
         currentHealth -= damage;
         if (currentHealth <= 0)
         {

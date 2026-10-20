@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using System.Collections.Generic;
 
 public class UnitWorldUI : MonoBehaviour
@@ -8,6 +9,9 @@ public class UnitWorldUI : MonoBehaviour
 
     [Header("Sağlık Barı")]
     [SerializeField] private Image healthFillImage; // İçini dolduracağımız bar
+
+    [Header("Kalkan Göstergesi (isteğe bağlı)")]
+    [SerializeField] private TMP_Text shieldText; // Kalkan 0 ise gizlenir
 
     [Header("Hareket Göstergesi")]
     [SerializeField] private GameObject movePipPrefab;
@@ -79,6 +83,13 @@ public class UnitWorldUI : MonoBehaviour
         if (healthFillImage != null)
         {
             healthFillImage.fillAmount = (float)targetUnit.currentHealth / targetUnit.maxHealth;
+        }
+
+        // Kalkan yazısı
+        if (shieldText != null)
+        {
+            shieldText.gameObject.SetActive(targetUnit.currentShield > 0);
+            shieldText.text = targetUnit.currentShield.ToString();
         }
 
         // 2. Hareket Çizgilerini Güncelle

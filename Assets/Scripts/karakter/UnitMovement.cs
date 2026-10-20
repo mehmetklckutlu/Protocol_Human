@@ -34,6 +34,9 @@ public class UnitMovement : MonoBehaviour
         // Karakter hareket ediyorsa, sıra bizde değilse veya bu karakter düşmansa iptal et
         if (isMoving || TurnManager.Instance.CurrentState != TurnState.PlayerTurn || !myUnit.isPlayerOwned) return;
 
+        // Kart hedefi seçilirken harita tıklamaları hareketi tetiklemesin
+        if (CardManager.Instance != null && CardManager.Instance.BlocksMapInput) return;
+
         // Farenin sol tuşuna tıklandığında
         if (Input.GetMouseButtonDown(0))
         {

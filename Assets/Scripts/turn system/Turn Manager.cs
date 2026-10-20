@@ -1,3 +1,4 @@
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -89,6 +90,8 @@ public class TurnManager : MonoBehaviour
         }
 
         wasInCombat = inCombat;
+
+        if (CardManager.Instance != null) CardManager.Instance.RefreshUI();
     }
 
     private void EndCombat()
@@ -173,6 +176,9 @@ public class TurnManager : MonoBehaviour
 
         foreach (Unit u in playerUnits) { if (u != null) u.OnTurnStart(); }
 
+        // Eksik kartları 2 attack + 2 defans olana kadar tamamla
+        if (CardManager.Instance != null) CardManager.Instance.OnPlayerTurnStart();
+
         // Oyuncuyu aktif olarak göster
         if (TurnOrderUI.Instance != null && playerUnits.Count > 0)
             TurnOrderUI.Instance.SetActiveUnit(playerUnits[0]);
@@ -187,6 +193,7 @@ public class TurnManager : MonoBehaviour
     private void StartEnemyTurn()
     {
         CurrentState = TurnState.EnemyTurn;
+        if (CardManager.Instance != null) CardManager.Instance.CancelTargeting();
         foreach (Unit u in enemyUnits) { if (u != null) u.OnTurnStart(); }
         StartCoroutine(EnemyTurnRoutine());
     }
@@ -220,12 +227,16 @@ public class TurnManager : MonoBehaviour
         {
             previousState = CurrentState;
             CurrentState = TurnState.Busy;
+            if (CardManager.Instance != null) CardManager.Instance.RefreshUI();
         }
     }
 
     public void ClearBusy()
     {
         if (CurrentState == TurnState.Busy)
+        {
             CurrentState = previousState;
+            if (CardManager.Instance != null) CardManager.Instance.RefreshUI();
+        }
     }
 }
