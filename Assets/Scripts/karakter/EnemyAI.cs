@@ -34,45 +34,54 @@ public class EnemyAI : MonoBehaviour
 
     private void Update()
     {
-        if (!isAwake && TurnManager.Instance.playerUnits.Count > 0)
+        if (isAwake) return;
+
+        // Sahnedeki HERHANGİ bir oyuncu birimi menzildeyse ve arada duvar yoksa uyan
+        foreach (Unit target in TurnManager.Instance.playerUnits)
         {
-            Unit target = TurnManager.Instance.playerUnits[0];
+            if (target == null) continue;
+
             Vector2Int currentPos = GridManager.Instance.GetGridPosition(transform.position);
             Vector2Int targetPos = GridManager.Instance.GetGridPosition(target.transform.position);
-
             int distanceToTarget = Mathf.Abs(currentPos.x - targetPos.x) + Mathf.Abs(currentPos.y - targetPos.y);
 
-            if (distanceToTarget <= visionRange)
-            {
-                RaycastHit2D hit = Physics2D.Linecast(transform.position, target.transform.position, obstacleLayer);
+            if (distanceToTarget > visionRange) continue;
 
-                if (hit.collider == null)
-                {
-                    isAwake = true;
-                    Debug.Log($"<color=red>{gameObject.name} oyuncuyu FARK ETTİ!</color>");
+            RaycastHit2D hit = Physics2D.Linecast(transform.position, target.transform.position, obstacleLayer);
+            if (hit.collider != null) continue; // Arada duvar var
 
-                    TurnManager.Instance.UpdateCombatState();
-
-                    // İŞTE HATA BURADAYDI, YENİ SİSTEME GÖRE DÜZELTİLDİ:
-                    if (TurnOrderUI.Instance != null)
-                        TurnOrderUI.Instance.AddUnitToQueue(myUnit);
-
-                    StartCoroutine(TurnManager.Instance.ShowEnemyAlert());
-                }
-            }
+            WakeUp();
+            return;
         }
+    }
+
+    private void WakeUp()
+    {
+        isAwake = true;
+        Debug.Log($"<color=red>{gameObject.name} oyuncuyu FARK ETTİ!</color>");
+
+        TurnManager.Instance.UpdateCombatState();
+
+        // İlk uyanan düşman zaten UpdateCombatState içinde kuyruğa eklenir; sonrakiler burada eklenir
+        if (TurnOrderUI.Instance != null)
+            TurnOrderUI.Instance.AddUnitToQueue(myUnit);
+
+        StartCoroutine(TurnManager.Instance.ShowEnemyAlert());
     }
 
     public IEnumerator TakeTurnRoutine()
     {
-        if (!isAwake || TurnManager.Instance.playerUnits.Count == 0) yield break;
+        if (!isAwake) yield break;
 
-        Unit target = TurnManager.Instance.playerUnits[0];
         bool hasAttackedThisTurn = false;
         bool hasMovedThisTurn = false;
 
         while (myUnit.currentCPU > 0)
         {
+            // Her adımda en yakın yaşayan oyuncuyu hedef al (hedef ölmüş olabilir)
+            Unit target = TurnManager.Instance.GetClosestPlayer(transform.position);
+            if (target == null) break;
+
             Vector2Int currentPos = GridManager.Instance.GetGridPosition(transform.position);
             Vector2Int targetPos = GridManager.Instance.GetGridPosition(target.transform.position);
             int distanceToTarget = Mathf.Abs(currentPos.x - targetPos.x) + Mathf.Abs(currentPos.y - targetPos.y);

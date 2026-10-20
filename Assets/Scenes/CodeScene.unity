@@ -492,8 +492,8 @@ MonoBehaviour:
   zoomSpeed: 5
   minZoom: 3
   maxZoom: 15
-  minLimits: {x: -5, y: -5}
-  maxLimits: {x: 25, y: 25}
+  boundsTilemap: {fileID: 537104077}
+  edgeMargin: 0
 --- !u!1 &468314800
 GameObject:
   m_ObjectHideFlags: 0

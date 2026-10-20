@@ -1,4 +1,3 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -20,10 +19,25 @@ public class TurnManager : MonoBehaviour
     public GameObject roundEndUI; // Tur Bitti yazısı
 
     private TurnState previousState;
+    private bool wasInCombat = false; // Savaşa GEÇİŞİ yakalamak için
 
     private void Awake()
     {
         Instance = this;
+    }
+
+    // TEST: K tuşu uyanık bir düşmanı öldürür. Savaştan çıkışı denemek için; işin bitince sil.
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.K))
+        {
+            foreach (Unit enemy in new List<Unit>(enemyUnits))
+            {
+                if (enemy == null) continue;
+                EnemyAI ai = enemy.GetComponent<EnemyAI>();
+                if (ai != null && ai.isAwake) { enemy.TakeDamage(9999); break; }
+            }
+        }
     }
 
     private void Start()
@@ -50,10 +64,64 @@ public class TurnManager : MonoBehaviour
         if (endTurnButton != null)
             endTurnButton.SetActive(inCombat);
 
+        // Sadece Keşif -> Savaş geçişinde bir kere çalışır.
+        // (Savaş sırasında 2. düşman uyanınca oyuncunun hareketi yeniden dolmasın)
+        if (inCombat && !wasInCombat)
+        {
+            foreach (Unit player in playerUnits)
+            {
+                if (player != null) player.OnTurnStart();
+            }
+
+            // Tur sırası UI'ını savaş başlarken kur (oyuncu ikonları + aktif portre)
+            if (TurnOrderUI.Instance != null)
+            {
+                TurnOrderUI.Instance.BuildNewRoundQueue();
+                if (playerUnits.Count > 0 && playerUnits[0] != null)
+                    TurnOrderUI.Instance.SetActiveUnit(playerUnits[0]);
+            }
+        }
+
+        // Savaştan -> Keşfe dönüş: hiç uyanık düşman kalmadı
+        if (!inCombat && wasInCombat)
+        {
+            EndCombat();
+        }
+
+        wasInCombat = inCombat;
+    }
+
+    private void EndCombat()
+    {
+        Debug.Log("<color=green>Savaş bitti, Keşif Moduna dönüldü.</color>");
+
+        // Savaş yazılarını ve tur sırası arayüzünü kapat
+        if (enemyAlertUI != null) enemyAlertUI.SetActive(false);
+        if (roundEndUI != null) roundEndUI.SetActive(false);
+        if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.ClearAll();
+
+        // Oyuncuların hareketini/CPU'sunu doldur (UI çubukları da güncellenir, CPU barı gizlenir)
         foreach (Unit player in playerUnits)
         {
             if (player != null) player.OnTurnStart();
         }
+    }
+
+    // Verilen konuma en yakın (grid mesafesine göre) yaşayan oyuncu birimini döndürür
+    public Unit GetClosestPlayer(Vector3 fromWorldPos)
+    {
+        Unit best = null;
+        int bestDist = int.MaxValue;
+        Vector2Int from = GridManager.Instance.GetGridPosition(fromWorldPos);
+
+        foreach (Unit p in playerUnits)
+        {
+            if (p == null) continue;
+            Vector2Int pp = GridManager.Instance.GetGridPosition(p.transform.position);
+            int d = Mathf.Abs(from.x - pp.x) + Mathf.Abs(from.y - pp.y);
+            if (d < bestDist) { bestDist = d; best = p; }
+        }
+        return best;
     }
 
     public IEnumerator ShowEnemyAlert()
@@ -87,6 +155,12 @@ public class TurnManager : MonoBehaviour
     {
         if (unit.isPlayerOwned) playerUnits.Remove(unit);
         else enemyUnits.Remove(unit);
+
+        // Ölen birimin ikonu tur sırasından silinir
+        if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.RemoveUnit(unit);
+
+        // Son uyanık düşman öldüyse savaş biter
+        if (!unit.isPlayerOwned) UpdateCombatState();
     }
 
     public void StartPlayerTurn()
@@ -119,7 +193,7 @@ public class TurnManager : MonoBehaviour
 
     private IEnumerator EnemyTurnRoutine()
     {
-        foreach (Unit enemy in enemyUnits)
+        foreach (Unit enemy in new List<Unit>(enemyUnits)) // kopya: tur sırasında biri ölürse liste bozulmasın
         {
             if (enemy == null) continue;
 

@@ -63,6 +63,29 @@ public class TurnOrderUI : MonoBehaviour
         }
     }
 
+    // Ölen birimin ikonunu kuyruktan siler
+    public void RemoveUnit(Unit unit)
+    {
+        if (unit != null && portraitDict.ContainsKey(unit))
+        {
+            if (portraitDict[unit] != null) Destroy(portraitDict[unit]);
+            portraitDict.Remove(unit);
+        }
+    }
+
+    // Savaş bitince tüm tur sırası arayüzünü temizler ve gizler
+    public void ClearAll()
+    {
+        portraitDict.Clear();
+        foreach (Transform child in container)
+        {
+            Destroy(child.gameObject);
+        }
+
+        if (activeUnitPortrait != null) activeUnitPortrait.gameObject.SetActive(false);
+        if (activeUnitFrame != null) activeUnitFrame.SetActive(false);
+    }
+
     private void CreatePortrait(Unit unit, Color color)
     {
         GameObject portrait = Instantiate(portraitPrefab, container);

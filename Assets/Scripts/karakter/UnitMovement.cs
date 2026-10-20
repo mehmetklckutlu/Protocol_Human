@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(Unit))]
 public class UnitMovement : MonoBehaviour
@@ -36,6 +37,9 @@ public class UnitMovement : MonoBehaviour
         // Farenin sol tuşuna tıklandığında
         if (Input.GetMouseButtonDown(0))
         {
+            // UI (Turu Bitir butonu vb.) üzerine tıklandıysa haritayı tıklamış sayma
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
             // SAVAŞTA DEĞİLSEK: Her tıklamada hareketi ve CPU'yu fullüyoruz (Sınırsız gezinti)
             if (!TurnManager.Instance.IsInCombat())
             {
