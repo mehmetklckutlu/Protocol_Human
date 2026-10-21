@@ -18,8 +18,7 @@ public static class CardSystemSetup
         EnsureFolder("Assets", "Prefabs");
 
         // 1) Temel kartlar (varsa dokunmaz, böylece Inspector'da yaptığın ayarlar korunur)
-        CardData attack = GetOrCreateCard("Assets/Cards/TemelSaldiri.asset", "Temel Saldırı", CardType.Attack, 20, 1, 0);
-        CardData defense = GetOrCreateCard("Assets/Cards/TemelSavunma.asset", "Temel Savunma", CardType.Defense, 0, 1, 15);
+        // (Eski "Temel Saldırı / Temel Savunma" kartları kaldırıldı; ana drone kartları Level > Drone Sistemini Kur ile gelir.)
 
         // 2) CardManager
         CardManager cm = Object.FindFirstObjectByType<CardManager>();
@@ -29,10 +28,6 @@ public static class CardSystemSetup
             Undo.RegisterCreatedObjectUndo(go, "CardManager");
             cm = go.AddComponent<CardManager>();
         }
-        SerializedObject cmSo = new SerializedObject(cm);
-        cmSo.FindProperty("defaultAttackCard").objectReferenceValue = attack;
-        cmSo.FindProperty("defaultDefenseCard").objectReferenceValue = defense;
-        cmSo.ApplyModifiedProperties();
 
         // 3) Kart prefab'ı
         CardView cardPrefab = GetOrCreateCardPrefab("Assets/Prefabs/Card.prefab");

@@ -34,6 +34,9 @@ public class UnitMovement : MonoBehaviour
         // Karakter hareket ediyorsa, sıra bizde değilse veya bu karakter düşmansa iptal et
         if (isMoving || TurnManager.Instance.CurrentState != TurnState.PlayerTurn || !myUnit.isPlayerOwned) return;
 
+        // Savaşta sadece sırası gelen drone hareket eder
+        if (TurnManager.Instance.IsInCombat() && TurnManager.Instance.CurrentPlayerUnit != myUnit) return;
+
         // Kart hedefi seçilirken harita tıklamaları hareketi tetiklemesin
         if (CardManager.Instance != null && CardManager.Instance.BlocksMapInput) return;
 
@@ -42,6 +45,13 @@ public class UnitMovement : MonoBehaviour
         {
             // UI (Turu Bitir butonu vb.) üzerine tıklandıysa haritayı tıklamış sayma
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
+            Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector2Int clickedGridPos = GridManager.Instance.GetGridPosition(mouseWorldPos);
+
+            // Kendi karemize tıklandı: kartları bu birim oynasın (hareketi kalmasa da seçilebilir)
+            if (clickedGridPos == CurrentGridPosition && CardManager.Instance != null)
+                CardManager.Instance.SetActiveUnit(myUnit);
 
             // SAVAŞTA DEĞİLSEK: Her tıklamada hareketi ve CPU'yu fullüyoruz (Sınırsız gezinti)
             if (!TurnManager.Instance.IsInCombat())
@@ -60,9 +70,6 @@ public class UnitMovement : MonoBehaviour
                 return;
             }
 
-            Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            Vector2Int clickedGridPos = GridManager.Instance.GetGridPosition(mouseWorldPos);
-
             // DURUM 1: Kendi üzerine tıklandı (Seçim Modu)
             if (clickedGridPos == CurrentGridPosition)
             {
@@ -73,6 +80,14 @@ public class UnitMovement : MonoBehaviour
             // DURUM 2: Seçiliyken başka yere tıklandı (Yürüme)
             else if (isSelected)
             {
+                // Başka bir birimin üstüne yürünmez (o birimi seçmek için tıklanmış olabilir)
+                if (IsOccupiedByOtherUnit(clickedGridPos))
+                {
+                    isSelected = false;
+                    HighlightManager.Instance.ClearHighlights();
+                    return;
+                }
+
                 Node clickedNode = GridManager.Instance.GetNode(clickedGridPos);
 
                 if (clickedNode != null && reachableNodes.Contains(clickedNode))
@@ -101,6 +116,16 @@ public class UnitMovement : MonoBehaviour
             isSelected = false;
             HighlightManager.Instance.ClearHighlights();
         }
+    }
+
+    private bool IsOccupiedByOtherUnit(Vector2Int cell)
+    {
+        TurnManager tm = TurnManager.Instance;
+        foreach (Unit u in tm.playerUnits)
+            if (u != null && u != myUnit && GridManager.Instance.GetGridPosition(u.transform.position) == cell) return true;
+        foreach (Unit u in tm.enemyUnits)
+            if (u != null && GridManager.Instance.GetGridPosition(u.transform.position) == cell) return true;
+        return false;
     }
 
     private IEnumerator MoveAlongPath(List<Node> path)

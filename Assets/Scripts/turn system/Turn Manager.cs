@@ -19,26 +19,16 @@ public class TurnManager : MonoBehaviour
     public GameObject endTurnButton; // Turu Bitir Butonu
     public GameObject roundEndUI; // Tur Bitti yazısı
 
+    // Oyuncu tarafında her drone'un kendi turu var: sıra bu listede ilerler
+    private readonly List<Unit> playerQueue = new List<Unit>();
+    public Unit CurrentPlayerUnit { get; private set; }
+
     private TurnState previousState;
     private bool wasInCombat = false; // Savaşa GEÇİŞİ yakalamak için
 
     private void Awake()
     {
         Instance = this;
-    }
-
-    // TEST: K tuşu uyanık bir düşmanı öldürür. Savaştan çıkışı denemek için; işin bitince sil.
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.K))
-        {
-            foreach (Unit enemy in new List<Unit>(enemyUnits))
-            {
-                if (enemy == null) continue;
-                EnemyAI ai = enemy.GetComponent<EnemyAI>();
-                if (ai != null && ai.isAwake) { enemy.TakeDamage(9999); break; }
-            }
-        }
     }
 
     private void Start()
@@ -69,18 +59,7 @@ public class TurnManager : MonoBehaviour
         // (Savaş sırasında 2. düşman uyanınca oyuncunun hareketi yeniden dolmasın)
         if (inCombat && !wasInCombat)
         {
-            foreach (Unit player in playerUnits)
-            {
-                if (player != null) player.OnTurnStart();
-            }
-
-            // Tur sırası UI'ını savaş başlarken kur (oyuncu ikonları + aktif portre)
-            if (TurnOrderUI.Instance != null)
-            {
-                TurnOrderUI.Instance.BuildNewRoundQueue();
-                if (playerUnits.Count > 0 && playerUnits[0] != null)
-                    TurnOrderUI.Instance.SetActiveUnit(playerUnits[0]);
-            }
+            BeginPlayerRound();
         }
 
         // Savaştan -> Keşfe dönüş: hiç uyanık düşman kalmadı
@@ -102,6 +81,20 @@ public class TurnManager : MonoBehaviour
         if (enemyAlertUI != null) enemyAlertUI.SetActive(false);
         if (roundEndUI != null) roundEndUI.SetActive(false);
         if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.ClearAll();
+
+        // Çağrılan yardımcı drone'lar savaşla birlikte kapanır
+        foreach (Unit player in new List<Unit>(playerUnits))
+        {
+            if (player == null) continue;
+            DroneUnit d = player.GetComponent<DroneUnit>();
+            if (d != null && d.isAlly)
+            {
+                FloatingText.Spawn(player.transform.position, "KAPANDI", Color.gray);
+                player.Kill();
+            }
+        }
+        playerQueue.Clear();
+        CurrentPlayerUnit = null;
 
         // Oyuncuların hareketini/CPU'sunu doldur (UI çubukları da güncellenir, CPU barı gizlenir)
         foreach (Unit player in playerUnits)
@@ -159,35 +152,121 @@ public class TurnManager : MonoBehaviour
         if (unit.isPlayerOwned) playerUnits.Remove(unit);
         else enemyUnits.Remove(unit);
 
+        playerQueue.Remove(unit);
+        if (unit == CurrentPlayerUnit)
+        {
+            CurrentPlayerUnit = null;
+            // Sırası gelen drone yok olduysa (kendini patlattı vb.) sıra bir sonrakine geçsin
+            if (unit.isPlayerOwned && !IsGameOver && IsInCombat()) StartCoroutine(AdvanceNextFrame());
+        }
+
         // Ölen birimin ikonu tur sırasından silinir
         if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.RemoveUnit(unit);
 
         // Son uyanık düşman öldüyse savaş biter
         if (!unit.isPlayerOwned) UpdateCombatState();
+        else if (CardManager.Instance != null) CardManager.Instance.RefreshUI();
+    }
+
+    // Sırası gelen birime kamera gider; oyuncu tarafıysa kartları da açılır (tıklanmış gibi)
+    private void FocusTurnOn(Unit u, bool selectForCards)
+    {
+        if (u == null) return;
+
+        // Sisli (görünmeyen) düşmana kamera gitmesin
+        if (!u.isPlayerOwned && FogOfWar.Instance != null && GridManager.Instance != null &&
+            !FogOfWar.Instance.IsVisible(GridManager.Instance.GetGridPosition(u.transform.position)))
+            return;
+
+        if (TacticalCamera.Instance != null && IsInCombat()) TacticalCamera.Instance.FollowUnit(u.transform);
+        if (selectForCards && CardManager.Instance != null) CardManager.Instance.SetActiveUnit(u);
     }
 
     public void StartPlayerTurn()
     {
         CurrentState = TurnState.PlayerTurn;
+        CurrentPlayerUnit = null;
 
-        // Yeni tur (Round) başladığında UI'a listeyi baştan oluşturmasını söylüyoruz
-        if (TurnOrderUI.Instance != null && IsInCombat())
-            TurnOrderUI.Instance.BuildNewRoundQueue();
-
-        foreach (Unit u in playerUnits) { if (u != null) u.OnTurnStart(); }
-
-        // Eksik kartları 2 attack + 2 defans olana kadar tamamla
-        if (CardManager.Instance != null) CardManager.Instance.OnPlayerTurnStart();
-
-        // Oyuncuyu aktif olarak göster
-        if (TurnOrderUI.Instance != null && playerUnits.Count > 0)
-            TurnOrderUI.Instance.SetActiveUnit(playerUnits[0]);
+        if (IsInCombat())
+        {
+            BeginPlayerRound();
+        }
+        else
+        {
+            // Keşif modu: herkes serbest
+            foreach (Unit u in playerUnits) { if (u != null) u.OnTurnStart(); }
+            if (CardManager.Instance != null) CardManager.Instance.OnPlayerTurnStart();
+        }
     }
 
+    // Oyuncu tarafının turu: önce yardımcı drone'lar (çağrılma sırasıyla), en son ana drone
+    private void BeginPlayerRound()
+    {
+        playerQueue.Clear();
+        Unit main = null;
+        foreach (Unit u in playerUnits)
+        {
+            if (u == null) continue;
+            if (u.isMainDrone) main = u; else playerQueue.Add(u);
+        }
+        if (main != null) playerQueue.Add(main);
+
+        if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.BuildNewRoundQueue();
+        AdvancePlayerQueue();
+    }
+
+    // Sıradaki drone'a geçer; kimse kalmadıysa düşman turu başlar
+    private void AdvancePlayerQueue()
+    {
+        while (playerQueue.Count > 0)
+        {
+            Unit u = playerQueue[0];
+            playerQueue.RemoveAt(0);
+            if (u == null) continue;
+            BeginUnitTurn(u);
+            return;
+        }
+        CurrentPlayerUnit = null;
+        StartEnemyTurn();
+    }
+
+    private void BeginUnitTurn(Unit u)
+    {
+        CurrentPlayerUnit = u;
+        u.OnTurnStart();
+
+        if (CardManager.Instance != null)
+        {
+            if (u.isMainDrone) CardManager.Instance.OnPlayerTurnStart(); // tur kartları tamamlanır
+            CardManager.Instance.SetActiveUnit(u);                       // kartları bu drone'un eli açılır
+        }
+
+        if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.SetActiveUnit(u);
+        FocusTurnOn(u, false);
+    }
+
+    private IEnumerator AdvanceNextFrame()
+    {
+        yield return null;
+        if (CurrentState == TurnState.PlayerTurn && CurrentPlayerUnit == null && !IsGameOver && IsInCombat())
+            AdvancePlayerQueue();
+    }
+
+    // Çağrılan yeni drone, bu turun sonunda sıraya eklenir
+    public void AddToPlayerQueue(Unit u)
+    {
+        if (u != null && IsInCombat() && !playerQueue.Contains(u) && u != CurrentPlayerUnit) playerQueue.Add(u);
+    }
+
+    // "Turu Bitir": sıradaki drone'a geçer
     public void EndPlayerTurn()
     {
         if (CurrentState != TurnState.PlayerTurn) return;
-        StartEnemyTurn();
+        if (CardManager.Instance != null) CardManager.Instance.CancelTargeting();
+        if (HighlightManager.Instance != null) HighlightManager.Instance.ClearHighlights();
+
+        if (!IsInCombat()) return;
+        AdvancePlayerQueue();
     }
 
     private void StartEnemyTurn()
@@ -211,6 +290,9 @@ public class TurnManager : MonoBehaviour
                 if (TurnOrderUI.Instance != null)
                     TurnOrderUI.Instance.SetActiveUnit(enemy);
 
+                FocusTurnOn(enemy, false);
+                yield return new WaitForSeconds(0.5f); // kamera düşmana gelsin
+
                 yield return StartCoroutine(ai.TakeTurnRoutine());
             }
         }
@@ -218,7 +300,36 @@ public class TurnManager : MonoBehaviour
         // TÜM DÜŞMANLAR BİTTİ - TUR (ROUND) BAŞA DÖNÜYOR
         yield return StartCoroutine(ShowRoundEndRoutine());
 
+        if (IsGameOver) yield break;
+        TickRoundEffects();
+
         StartPlayerTurn();
+    }
+
+    // Her tam tur sonunda: taunt süresi azalır, dost drone'ların şarjı azalır (0 olunca ölür)
+    private void TickRoundEffects()
+    {
+        if (!IsInCombat()) return;
+
+        foreach (Unit u in new List<Unit>(playerUnits))
+        {
+            if (u == null) continue;
+            if (u.tauntTurns > 0) u.tauntTurns--;
+
+            DroneUnit d = u.GetComponent<DroneUnit>();
+            if (d != null && d.isAlly) d.TickCharge();
+        }
+    }
+
+    public bool IsGameOver { get; private set; }
+
+    // Ana drone yok olunca çağrılır
+    public void GameOver()
+    {
+        if (IsGameOver) return;
+        IsGameOver = true;
+        CurrentState = TurnState.Busy;
+        GameOverUI.Show();
     }
 
     public void SetBusy()

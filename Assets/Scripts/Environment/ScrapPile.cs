@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 // Hurda yığını: yanındaki parlayan karoya gelince "Araştır" paneli açılır.
@@ -10,10 +11,10 @@ public class ScrapPile : MonoBehaviour
     [SerializeField] private float searchDuration = 3f;
     [SerializeField, Min(0)] private int scrapMin = 1;
     [SerializeField, Min(0)] private int scrapMax = 5;
-    [Tooltip("Araştırmada müttefik çağırma kartı bulma ihtimali (0.1 = %10).")]
-    [SerializeField, Range(0f, 1f)] private float allyCardChance = 0.1f;
-    [Tooltip("Bulunacak müttefik çağırma kartı (Assets/Cards/MuttefikCagir).")]
-    [SerializeField] private CardData allyCard;
+    [Tooltip("Araştırmada blueprint bulma ihtimali (0.1 = %10).")]
+    [SerializeField, Range(0f, 1f)] private float blueprintChance = 0.1f;
+    [Tooltip("Bulunabilecek blueprint kartları (rastgele biri seçilir).")]
+    [SerializeField] private List<CardData> blueprints = new List<CardData>();
     [Tooltip("Açık: yığın bir kez araştırılınca tükenir.")]
     [SerializeField] private bool searchOnlyOnce = true;
     [Tooltip("Açık: sadece savaş dışında araştırılabilir.")]
@@ -154,10 +155,14 @@ public class ScrapPile : MonoBehaviour
         ScrapInventory.Add(scrap);
         string msg = "+" + scrap + " hurda bulundu";
 
-        if (allyCard != null && CardManager.Instance != null && Random.value < allyCardChance)
+        if (blueprints.Count > 0 && CardManager.Instance != null && Random.value < blueprintChance)
         {
-            CardManager.Instance.AddCard(allyCard);
-            msg += "\n<color=#7CFF8A>" + allyCard.cardName + " kartı bulundu!</color>";
+            CardData bp = blueprints[Random.Range(0, blueprints.Count)];
+            if (bp != null)
+            {
+                CardManager.Instance.AddCard(bp);
+                msg += "\n<color=#7CFF8A>Blueprint: " + bp.cardName + "</color>";
+            }
         }
 
         TurnManager.Instance.ClearBusy();

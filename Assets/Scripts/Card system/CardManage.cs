@@ -7,25 +7,24 @@ public class CardManager : MonoBehaviour
 {
     public static CardManager Instance { get; private set; }
 
-    [Header("Her Tur Başında Tamamlanacak Kart Sayısı")]
-    [SerializeField] private int minAttackCards = 2;
-    [SerializeField] private int minDefenseCards = 2;
+    [Header("Ana Drone: Her Tur Başında Elde Olması Gereken Kartlar")]
+    [Tooltip("Bu kartlar her tur başında, elde yoksa yeniden verilir (bedelsiz).")]
+    [SerializeField] private List<CardData> turnCards = new List<CardData>();
 
-    [Header("Tamamlama Kartları (eksik kalınca bunlar verilir)")]
-    [SerializeField] private CardData defaultAttackCard;
-    [SerializeField] private CardData defaultDefenseCard;
-
-    [Header("Oyun Başında Elde Olan Kartlar (isteğe bağlı)")]
+    [Header("Ana Drone: Oyun Başında Elde Olan Kartlar (isteğe bağlı)")]
     [SerializeField] private List<CardData> startingCards = new List<CardData>();
 
+    // Ana drone'un eli: kullanılan kart elden gider
     public List<CardData> Hand { get; } = new List<CardData>();
     public event Action OnHandChanged;
 
-    private CardData pendingAttackCard;   // Hedef seçilmeyi bekleyen saldırı kartı
+    private Unit activeUnit;               // Kartları oynayan seçili birim
+    private CardData pendingCard;          // Hedef seçilmeyi bekleyen saldırı kartı
     private int clickConsumedFrame = -1;
+    private ExplosiveBarrel hoveredBarrel;
 
-    public bool IsTargeting => pendingAttackCard != null;
-    public CardData PendingCard => pendingAttackCard;
+    public bool IsTargeting => pendingCard != null;
+    public CardData PendingCard => pendingCard;
 
     // Harita tıklamalarını (hareket) engellemek için UnitMovement bunu kontrol eder
     public bool BlocksMapInput => IsTargeting || clickConsumedFrame == Time.frameCount;
@@ -36,9 +35,66 @@ public class CardManager : MonoBehaviour
         Hand.AddRange(startingCards);
     }
 
+    private void Start()
+    {
+        ScrapUI.Instance.enabled = true;              // hurda sayacı arayüzünü hazırla
+        ScrapInventory.OnChanged += NotifyHandChanged; // hurda değişince kartların aktifliği güncellensin
+    }
+
+    private void OnDestroy()
+    {
+        ScrapInventory.OnChanged -= NotifyHandChanged;
+    }
+
+    // ---------- Aktif birim ve el ----------
+
+    private Unit GetMainUnit()
+    {
+        if (TurnManager.Instance == null) return null;
+        Unit first = null;
+        foreach (Unit u in TurnManager.Instance.playerUnits)
+        {
+            if (u == null) continue;
+            if (u.isMainDrone) return u;
+            if (first == null && u.usesCpu) first = u;
+        }
+        return first;
+    }
+
+    public Unit GetActiveUnit()
+    {
+        TurnManager tm = TurnManager.Instance;
+        if (tm != null && tm.IsInCombat() && tm.CurrentPlayerUnit != null) return tm.CurrentPlayerUnit; // sırası gelen
+        if (activeUnit != null && activeUnit.isPlayerOwned) return activeUnit;
+        return GetMainUnit();
+    }
+
+    public void SetActiveUnit(Unit u)
+    {
+        if (u == activeUnit) return;
+        CancelTargeting();
+        activeUnit = u;
+        NotifyHandChanged();
+    }
+
+    // Arayüzde gösterilen el: seçili birim dost drone ise onun kiti, değilse ana drone'un eli
+    public List<CardData> CurrentHand
+    {
+        get
+        {
+            Unit u = GetActiveUnit();
+            if (u != null)
+            {
+                DroneUnit d = u.GetComponent<DroneUnit>();
+                if (d != null && d.isAlly) return d.kit;
+            }
+            return Hand;
+        }
+    }
+
     // ---------- Dışarıdan kullanılan fonksiyonlar ----------
 
-    // Yerden toplanan / yaratıktan düşen kart elimize eklenir
+    // Yerden toplanan / yaratıktan düşen kart ana drone'un eline eklenir
     public void AddCard(CardData card)
     {
         if (card == null) return;
@@ -46,25 +102,16 @@ public class CardManager : MonoBehaviour
         NotifyHandChanged();
     }
 
-    // Oyuncu turu başında çağrılır: eksik kartları 2 attack + 2 defans olana kadar tamamlar
+    // Oyuncu turu başında çağrılır: tur kartları elde yoksa verilir
     public void OnPlayerTurnStart()
     {
         CancelTargeting();
+        activeUnit = null;
 
-        int attackCount = CountCards(CardType.Attack);
-        int defenseCount = CountCards(CardType.Defense);
-
-        while (attackCount < minAttackCards && defaultAttackCard != null)
+        foreach (CardData c in turnCards)
         {
-            Hand.Add(defaultAttackCard);
-            attackCount++;
+            if (c != null && !Hand.Contains(c)) Hand.Add(c);
         }
-        while (defenseCount < minDefenseCards && defaultDefenseCard != null)
-        {
-            Hand.Add(defaultDefenseCard);
-            defenseCount++;
-        }
-
         NotifyHandChanged();
     }
 
@@ -78,16 +125,23 @@ public class CardManager : MonoBehaviour
         if (tm == null || tm.CurrentState != TurnState.PlayerTurn || !tm.IsInCombat()) return false;
 
         Unit unit = GetActiveUnit();
-        return unit != null && unit.currentCPU >= card.cpuCost;
+        if (unit == null) return false;
+
+        if (unit.usesCpu) { if (unit.currentCPU < card.cpuCost) return false; }
+        else if (unit.cardsPlayedThisTurn >= unit.cardsPerTurn) return false;
+
+        if (card.scrapCost > ScrapInventory.Count) return false;
+        if (card.cardType == CardType.Summon && card.summonPrefab == null) return false;
+        return true;
     }
 
     // Karta tıklandığında CardView bunu çağırır
     public void OnCardClicked(CardData card)
     {
-        if (!Hand.Contains(card)) return;
+        if (!CurrentHand.Contains(card)) return;
 
         // Hedef bekleyen karta tekrar tıklanırsa iptal et
-        if (pendingAttackCard == card)
+        if (pendingCard == card)
         {
             CancelTargeting();
             NotifyHandChanged();
@@ -97,32 +151,88 @@ public class CardManager : MonoBehaviour
         CancelTargeting();
         if (!CanPlay(card)) { NotifyHandChanged(); return; }
 
-        if (card.cardType == CardType.Defense) PlayDefense(card);
-        else if (card.cardType == CardType.Summon) PlaySummon(card);
-        else BeginTargeting(card);
+        switch (card.cardType)
+        {
+            case CardType.Attack: BeginTargeting(card); break;
+            case CardType.Summon: PlaySummon(card); break;
+            default: PlayImmediate(card); break;
+        }
     }
 
     public void CancelTargeting()
     {
-        if (pendingAttackCard == null) return;
-        pendingAttackCard = null;
+        if (pendingCard == null) return;
+        pendingCard = null;
         ClearBarrelPreview();
         if (HighlightManager.Instance != null) HighlightManager.Instance.ClearHighlights();
         NotifyHandChanged();
     }
 
-    // ---------- Kart oynama ----------
+    // ---------- Bedel ödeme ----------
 
-    private void PlayDefense(CardData card)
+    // CPU / kart hakkı / hurda öder, ana drone'un kartıysa elden çıkarır
+    private void Pay(CardData card, Unit unit)
+    {
+        bool fromMainHand = ReferenceEquals(CurrentHand, Hand);
+
+        if (card.scrapCost > 0) ScrapInventory.TrySpend(card.scrapCost);
+        if (unit.usesCpu) unit.UseCPU(card.cpuCost);
+        else unit.cardsPlayedThisTurn++;
+
+        if (fromMainHand) Hand.Remove(card);
+    }
+
+    // ---------- Anında kullanılan kartlar (kalkan, taunt, CPU, şarj, patlatma) ----------
+
+    private void PlayImmediate(CardData card)
     {
         Unit unit = GetActiveUnit();
         if (unit == null) return;
 
-        unit.UseCPU(card.cpuCost);
-        unit.AddShield(card.shield);
-        Hand.Remove(card);
+        Pay(card, unit);
+        Vector3 pos = unit.transform.position;
+
+        if (card.shield > 0) unit.AddShield(card.shield);
+
+        if (card.tauntTurns > 0)
+        {
+            unit.tauntTurns = Mathf.Max(unit.tauntTurns, card.tauntTurns);
+            FloatingText.Spawn(pos, "TAUNT", new Color(1f, 0.6f, 0.2f), 1);
+        }
+
+        if (card.cpuRestore > 0)
+        {
+            // CPU her zaman ana drone'a gider
+            foreach (Unit u in new List<Unit>(TurnManager.Instance.playerUnits))
+            {
+                if (u == null || !u.usesCpu) continue;
+                u.RestoreCPU(card.cpuRestore);
+                FloatingText.Spawn(u.transform.position, "+" + card.cpuRestore + " CPU", new Color(0.4f, 1f, 1f), 1);
+            }
+        }
+
+        if (card.chargeAll > 0)
+        {
+            foreach (Unit u in new List<Unit>(TurnManager.Instance.playerUnits))
+            {
+                if (u == null) continue;
+                DroneUnit d = u.GetComponent<DroneUnit>();
+                if (d != null && d.isAlly) d.AddCharge(card.chargeAll);
+            }
+        }
+
+        // En sonda: birim yok olabilir (ana drone ise oyun kaybedilir)
+        if (card.selfDestruct)
+        {
+            Vector2Int c = GridManager.Instance.GetGridPosition(unit.transform.position);
+            BlastUtil.Explode(c, card.blastRadius, card.blastDamage, unit);
+            unit.Kill();
+        }
+
         NotifyHandChanged();
     }
+
+    // ---------- Saldırı kartları ----------
 
     private void BeginTargeting(CardData card)
     {
@@ -130,14 +240,14 @@ public class CardManager : MonoBehaviour
         List<ExplosiveBarrel> barrels = GetBarrelsInRange(card);
         if (targets.Count == 0 && barrels.Count == 0)
         {
-            Debug.Log("Menzilde düşman yok!");
+            Debug.Log("Menzilde hedef yok!");
             NotifyHandChanged();
             return;
         }
 
-        pendingAttackCard = card;
+        pendingCard = card;
 
-        // Vurulabilecek düşmanların karelerini mavi göster
+        // Vurulabilecek hedeflerin karelerini mavi göster
         List<Node> nodes = new List<Node>();
         foreach (Unit t in targets)
         {
@@ -184,20 +294,20 @@ public class CardManager : MonoBehaviour
             Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             Vector2Int clickedPos = GridManager.Instance.GetGridPosition(mouseWorldPos);
 
-            foreach (Unit enemy in GetTargetsInRange(pendingAttackCard))
+            foreach (Unit enemy in GetTargetsInRange(pendingCard))
             {
                 if (GridManager.Instance.GetGridPosition(enemy.transform.position) == clickedPos)
                 {
-                    ExecuteAttack(pendingAttackCard, enemy);
+                    ExecuteAttack(pendingCard, enemy);
                     return;
                 }
             }
 
-            foreach (ExplosiveBarrel barrel in GetBarrelsInRange(pendingAttackCard))
+            foreach (ExplosiveBarrel barrel in GetBarrelsInRange(pendingCard))
             {
                 if (barrel.Cell == clickedPos)
                 {
-                    ExecuteBarrelAttack(pendingAttackCard, barrel);
+                    ExecuteBarrelAttack(pendingCard, barrel);
                     return;
                 }
             }
@@ -207,20 +317,37 @@ public class CardManager : MonoBehaviour
         }
     }
 
+    // İsabet şansını atar. Iskalarsa yazı gösterir ve false döner.
+    private bool RollHit(CardData card, Vector3 pos)
+    {
+        if (UnityEngine.Random.value > card.hitChance)
+        {
+            FloatingText.Spawn(pos, "ISKA", new Color(0.8f, 0.8f, 0.8f));
+            return false;
+        }
+        return true;
+    }
+
     private void ExecuteAttack(CardData card, Unit target)
     {
         Unit attacker = GetActiveUnit();
         if (attacker == null || target == null) { CancelTargeting(); return; }
 
-        attacker.UseCPU(card.cpuCost);
-        Hand.Remove(card);
-
-        pendingAttackCard = null;
+        Pay(card, attacker);
+        pendingCard = null;
         ClearBarrelPreview();
         HighlightManager.Instance.ClearHighlights();
 
-        // Hasar en sonda: düşman ölürse savaş bitebilir
-        target.TakeDamage(card.damage);
+        if (RollHit(card, target.transform.position))
+        {
+            // Stun, hasardan önce uygulanır (hasar hedefi öldürebilir)
+            if (card.stunChance > 0f && UnityEngine.Random.value <= card.stunChance)
+            {
+                target.stunTurns = Mathf.Max(target.stunTurns, card.stunTurns);
+                FloatingText.Spawn(target.transform.position, "STUN!", new Color(1f, 0.9f, 0.3f), 1);
+            }
+            target.TakeDamage(card.damage);
+        }
 
         NotifyHandChanged();
     }
@@ -230,18 +357,16 @@ public class CardManager : MonoBehaviour
         Unit attacker = GetActiveUnit();
         if (attacker == null || barrel == null) { CancelTargeting(); return; }
 
-        attacker.UseCPU(card.cpuCost);
-        Hand.Remove(card);
-
-        pendingAttackCard = null;
+        Pay(card, attacker);
+        pendingCard = null;
         ClearBarrelPreview();
         HighlightManager.Instance.ClearHighlights();
 
-        barrel.Explode();
+        if (RollHit(card, barrel.transform.position)) barrel.Explode();
         NotifyHandChanged();
     }
 
-    // ---------- Müttefik çağırma ----------
+    // ---------- Drone çağırma (blueprint) ----------
 
     private void PlaySummon(CardData card)
     {
@@ -249,7 +374,12 @@ public class CardManager : MonoBehaviour
         if (caster == null) return;
 
         Vector2Int from = GridManager.Instance.GetGridPosition(caster.transform.position);
-        Vector2Int[] dirs = { Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down };
+        Vector2Int[] dirs =
+        {
+            Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down,
+            new Vector2Int(1, 1), new Vector2Int(-1, 1), new Vector2Int(1, -1), new Vector2Int(-1, -1)
+        };
+
         Vector2Int? spot = null;
         foreach (Vector2Int d in dirs)
         {
@@ -260,32 +390,25 @@ public class CardManager : MonoBehaviour
             break;
         }
 
-        if (spot == null) { Debug.Log("Müttefik çağıracak boş kare yok!"); NotifyHandChanged(); return; }
-
-        caster.UseCPU(card.cpuCost);
-        Hand.Remove(card);
-
-        Vector3 pos = GridManager.Instance.GetWorldPosition(spot.Value);
-        GameObject ally;
-        if (card.allyPrefab != null)
+        if (spot == null)
         {
-            ally = Instantiate(card.allyPrefab, pos, Quaternion.identity);
+            Debug.Log("Drone çağıracak boş kare yok!");
+            NotifyHandChanged();
+            return;
         }
-        else
+
+        Pay(card, caster);
+
+        GameObject go = Instantiate(card.summonPrefab, GridManager.Instance.GetWorldPosition(spot.Value), Quaternion.identity);
+        Unit ally = go.GetComponent<Unit>();
+        if (ally != null)
         {
-            // Geçici kutu müttefik: yerinde durur, düşmanların hedefi olabilir
-            ally = new GameObject("Müttefik");
-            ally.transform.position = pos;
-            ally.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
-            SpriteRenderer sr = ally.AddComponent<SpriteRenderer>();
-            sr.sprite = RuntimeArt.Square;
-            sr.color = new Color(0.3f, 0.85f, 0.45f);
-            sr.sortingOrder = 3;
-            Unit u = ally.AddComponent<Unit>();
-            u.isPlayerOwned = true;
-            u.maxHealth = card.allyHealth;
-            u.currentHealth = card.allyHealth;
+            ally.isPlayerOwned = true;
+            TurnManager.Instance.RegisterUnit(ally);
+            TurnManager.Instance.AddToPlayerQueue(ally); // tur sırasına otomatik eklenir
+            if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.AddUnitToQueue(ally);
         }
+
         NotifyHandChanged();
     }
 
@@ -300,8 +423,6 @@ public class CardManager : MonoBehaviour
     }
 
     // ---------- Varil hedefleme ----------
-
-    private ExplosiveBarrel hoveredBarrel;
 
     private List<ExplosiveBarrel> GetBarrelsInRange(CardData card)
     {
@@ -324,11 +445,11 @@ public class CardManager : MonoBehaviour
     private void UpdateBarrelPreview()
     {
         ExplosiveBarrel target = null;
-        if (pendingAttackCard != null && Camera.main != null &&
+        if (pendingCard != null && Camera.main != null &&
             !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
         {
             Vector2Int cell = GridManager.Instance.GetGridPosition(Camera.main.ScreenToWorldPoint(Input.mousePosition));
-            foreach (ExplosiveBarrel b in GetBarrelsInRange(pendingAttackCard))
+            foreach (ExplosiveBarrel b in GetBarrelsInRange(pendingCard))
                 if (b.Cell == cell) { target = b; break; }
         }
 
@@ -345,17 +466,6 @@ public class CardManager : MonoBehaviour
     }
 
     // ---------- Yardımcılar ----------
-
-    // Şimdilik kartı oynayan birim: listedeki ilk oyuncu birimi (TurnOrderUI'daki aktif birimle aynı)
-    private Unit GetActiveUnit()
-    {
-        if (TurnManager.Instance == null) return null;
-        foreach (Unit u in TurnManager.Instance.playerUnits)
-        {
-            if (u != null) return u;
-        }
-        return null;
-    }
 
     private List<Unit> GetTargetsInRange(CardData card)
     {
@@ -380,13 +490,6 @@ public class CardManager : MonoBehaviour
             if (dist <= card.range) result.Add(enemy);
         }
         return result;
-    }
-
-    private int CountCards(CardType type)
-    {
-        int count = 0;
-        foreach (CardData c in Hand) { if (c != null && c.cardType == type) count++; }
-        return count;
     }
 
     private void NotifyHandChanged() { OnHandChanged?.Invoke(); }

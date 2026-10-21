@@ -10,13 +10,24 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f5a902a4eeefdbc48a6264f4c9bc9645, type: 3}
-  m_Name: TemelSavunma
+  m_Name: P_CPU
   m_EditorClassIdentifier: Assembly-CSharp::CardData
-  cardName: Temel Savunma
-  cardType: 1
+  cardName: CPU Yenile
+  cardType: 3
   icon: {fileID: 0}
   description: 
-  cpuCost: 1
-  damage: 0
+  cpuCost: 0
+  scrapCost: 10
+  damage: 20
   range: 1
+  hitChance: 1
+  stunChance: 0
+  stunTurns: 1
   shield: 15
+  tauntTurns: 0
+  cpuRestore: 3
+  chargeAll: 0
+  selfDestruct: 0
+  blastRadius: 2
+  blastDamage: 50
+  summonPrefab: {fileID: 0}

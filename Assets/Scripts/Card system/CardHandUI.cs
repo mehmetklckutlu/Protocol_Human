@@ -35,7 +35,7 @@ public class CardHandUI : MonoBehaviour
 
         foreach (Transform child in container) Destroy(child.gameObject);
 
-        foreach (CardData card in cm.Hand)
+        foreach (CardData card in cm.CurrentHand)
         {
             if (card == null) continue;
             CardView view = Instantiate(cardPrefab, container);

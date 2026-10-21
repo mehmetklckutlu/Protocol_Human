@@ -10,13 +10,24 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f5a902a4eeefdbc48a6264f4c9bc9645, type: 3}
-  m_Name: TemelSaldiri
+  m_Name: P_Kalkan
   m_EditorClassIdentifier: Assembly-CSharp::CardData
-  cardName: "Temel Sald\u0131r\u0131"
-  cardType: 0
+  cardName: Kalkan
+  cardType: 1
   icon: {fileID: 0}
   description: 
   cpuCost: 1
+  scrapCost: 10
   damage: 20
-  range: 10
-  shield: 0
+  range: 1
+  hitChance: 1
+  stunChance: 0
+  stunTurns: 1
+  shield: 15
+  tauntTurns: 0
+  cpuRestore: 0
+  chargeAll: 0
+  selfDestruct: 0
+  blastRadius: 2
+  blastDamage: 50
+  summonPrefab: {fileID: 0}

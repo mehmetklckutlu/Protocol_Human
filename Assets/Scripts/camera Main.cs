@@ -24,6 +24,9 @@ public class TacticalCamera : MonoBehaviour
     [Tooltip("Tile'ların dışına ne kadar taşılabileceği (dünya birimi). 0 = tam tile üzerinde kalır.")]
     [SerializeField] private float edgeMargin = 0f;
 
+    public static TacticalCamera Instance { get; private set; }
+    private bool keepFollowing = false; // sırası gelen birimi sürekli takip et (oyuncu müdahale edene kadar)
+
     private Camera cam;
     private Vector3 dragOrigin;
     private bool isDragging = false;
@@ -35,6 +38,7 @@ public class TacticalCamera : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
         cam = GetComponent<Camera>();
         RecalculateBounds();
     }
@@ -65,6 +69,7 @@ public class TacticalCamera : MonoBehaviour
     {
         if (Input.GetKeyDown(focusKey) && targetToFocus != null)
         {
+            keepFollowing = false;
             isFocusing = true;
         }
 
@@ -94,7 +99,7 @@ public class TacticalCamera : MonoBehaviour
         Vector3 targetPos = new Vector3(targetToFocus.position.x, targetToFocus.position.y, transform.position.z);
         transform.position = Vector3.SmoothDamp(transform.position, targetPos, ref currentVelocity, focusSmoothTime);
 
-        if (Vector2.Distance(transform.position, targetPos) < 0.05f)
+        if (!keepFollowing && Vector2.Distance(transform.position, targetPos) < 0.05f)
         {
             isFocusing = false;
         }
@@ -107,6 +112,7 @@ public class TacticalCamera : MonoBehaviour
             dragOrigin = cam.ScreenToWorldPoint(Input.mousePosition);
             isDragging = true;
             isFocusing = false;
+            keepFollowing = false;
         }
 
         if (Input.GetMouseButton(2))
@@ -141,6 +147,7 @@ public class TacticalCamera : MonoBehaviour
         if (direction != Vector3.zero)
         {
             isFocusing = false;
+            keepFollowing = false;
             transform.position += direction.normalized * (panSpeed * Time.deltaTime);
         }
     }
@@ -185,6 +192,15 @@ public class TacticalCamera : MonoBehaviour
 
         pos.z = -10f;
         transform.position = pos;
+    }
+
+    // Sırası gelen birime kamerayı götürür ve hareket ederken takip eder
+    public void FollowUnit(Transform t)
+    {
+        if (t == null) return;
+        targetToFocus = t;
+        isFocusing = true;
+        keepFollowing = true;
     }
 
     public void SetTarget(Transform newTarget)

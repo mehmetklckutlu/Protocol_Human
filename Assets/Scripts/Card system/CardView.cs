@@ -18,13 +18,14 @@ public class CardView : MonoBehaviour
     [SerializeField] private Color attackColor = new Color(0.85f, 0.3f, 0.3f);
     [SerializeField] private Color defenseColor = new Color(0.3f, 0.55f, 0.9f);
     [SerializeField] private Color summonColor = new Color(0.3f, 0.75f, 0.4f);
+    [SerializeField] private Color utilityColor = new Color(0.65f, 0.4f, 0.85f);
     [SerializeField] private Color selectedColor = new Color(1f, 0.9f, 0.3f);
 
     public void Setup(CardData card, bool interactable, bool selected)
     {
         if (nameText != null) nameText.text = card.cardName;
         if (valueText != null) valueText.text = card.MainValue.ToString();
-        if (costText != null) costText.text = card.cpuCost.ToString();
+        if (costText != null) costText.text = card.cpuCost > 0 ? card.cpuCost.ToString() : "-";
         if (descriptionText != null) descriptionText.text = card.GetDescription();
 
         if (iconImage != null)
@@ -35,8 +36,14 @@ public class CardView : MonoBehaviour
 
         if (background != null)
         {
-            Color typeColor = card.cardType == CardType.Attack ? attackColor
-                            : card.cardType == CardType.Defense ? defenseColor : summonColor;
+            Color typeColor;
+            switch (card.cardType)
+            {
+                case CardType.Attack: typeColor = attackColor; break;
+                case CardType.Defense: typeColor = defenseColor; break;
+                case CardType.Summon: typeColor = summonColor; break;
+                default: typeColor = utilityColor; break;
+            }
             background.color = selected ? selectedColor : typeColor;
         }
 
