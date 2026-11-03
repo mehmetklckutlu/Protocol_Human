@@ -4,8 +4,6 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Unity üst menüsünde: Level > Gorus Sistemi Ekle
-// Açık sahneye FogOfWar objesini ekler (zaten varsa dokunmaz).
 public static class FogOfWarSetup
 {
     [MenuItem("Level/Gorus Sistemi Ekle")]

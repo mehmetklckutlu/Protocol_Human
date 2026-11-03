@@ -1,13 +1,10 @@
 using UnityEngine;
 
-// Geçici "kutu" görselleri için kod ile üretilen sprite'lar.
-// Gerçek sprite'lar gelince objelerdeki SpriteRenderer'a atanır; bu dosya gerekmez.
 public static class RuntimeArt
 {
     private static Sprite square;
     private static Sprite star;
 
-    // 1x1 birim boyunda beyaz kare (renk SpriteRenderer.color ile verilir)
     public static Sprite Square
     {
         get
@@ -24,7 +21,6 @@ public static class RuntimeArt
         }
     }
 
-    // 1x1 birim boyunda beş köşeli yıldız (beyaz, arkası şeffaf)
     public static Sprite Star
     {
         get

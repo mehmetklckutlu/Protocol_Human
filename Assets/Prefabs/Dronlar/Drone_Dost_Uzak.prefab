@@ -260,6 +260,7 @@ GameObject:
   - component: {fileID: 1496056076222870271}
   - component: {fileID: 8509153788074489165}
   - component: {fileID: 7020641650798444922}
+  - component: {fileID: 1368109615187028800}
   m_Layer: 0
   m_Name: Drone_Dost_Uzak
   m_TagString: Untagged
@@ -375,6 +376,7 @@ MonoBehaviour:
   currentMovement: 5
   maxCPU: 0
   currentCPU: 4
+  cpuPerTurn: 2
   currentShield: 0
   isMainDrone: 0
   usesCpu: 0
@@ -382,6 +384,8 @@ MonoBehaviour:
   cardsPlayedThisTurn: 0
   stunTurns: 0
   tauntTurns: 0
+  animator: {fileID: 0}
+  maxDeathAnimTime: 2
 --- !u!114 &7020641650798444922
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -407,6 +411,28 @@ MonoBehaviour:
   dropCards: []
   blueprint: {fileID: 0}
   blueprintChance: 0.25
+--- !u!95 &1368109615187028800
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4731948375706604050}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 51ba48c11efd5274fbeb6eb3ef1cabe6, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &4985920113749396110
 GameObject:
   m_ObjectHideFlags: 0

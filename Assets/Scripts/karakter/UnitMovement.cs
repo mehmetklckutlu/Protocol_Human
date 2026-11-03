@@ -16,7 +16,7 @@ public class UnitMovement : MonoBehaviour
     private bool isSelected = false;
     private List<Node> reachableNodes = new List<Node>();
 
-    private Unit myUnit; // Karakterin verilerini (Can, Hareket, CPU) tutan referans
+    private Unit myUnit;
 
     private void Awake()
     {
@@ -31,35 +31,27 @@ public class UnitMovement : MonoBehaviour
 
     private void Update()
     {
-        // Karakter hareket ediyorsa, sıra bizde değilse veya bu karakter düşmansa iptal et
         if (isMoving || TurnManager.Instance.CurrentState != TurnState.PlayerTurn || !myUnit.isPlayerOwned) return;
 
-        // Savaşta sadece sırası gelen drone hareket eder
         if (TurnManager.Instance.IsInCombat() && TurnManager.Instance.CurrentPlayerUnit != myUnit) return;
 
-        // Kart hedefi seçilirken harita tıklamaları hareketi tetiklemesin
         if (CardManager.Instance != null && CardManager.Instance.BlocksMapInput) return;
 
-        // Farenin sol tuşuna tıklandığında
         if (Input.GetMouseButtonDown(0))
         {
-            // UI (Turu Bitir butonu vb.) üzerine tıklandıysa haritayı tıklamış sayma
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
             Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             Vector2Int clickedGridPos = GridManager.Instance.GetGridPosition(mouseWorldPos);
 
-            // Kendi karemize tıklandı: kartları bu birim oynasın (hareketi kalmasa da seçilebilir)
             if (clickedGridPos == CurrentGridPosition && CardManager.Instance != null)
                 CardManager.Instance.SetActiveUnit(myUnit);
 
-            // SAVAŞTA DEĞİLSEK: Her tıklamada hareketi ve CPU'yu fullüyoruz (Sınırsız gezinti)
             if (!TurnManager.Instance.IsInCombat())
             {
                 myUnit.OnTurnStart();
             }
 
-            // Hareket puanı kalmadıysa tıklamayı iptal et
             if (myUnit.currentMovement <= 0)
             {
                 if (isSelected)
@@ -70,17 +62,14 @@ public class UnitMovement : MonoBehaviour
                 return;
             }
 
-            // DURUM 1: Kendi üzerine tıklandı (Seçim Modu)
             if (clickedGridPos == CurrentGridPosition)
             {
                 isSelected = true;
                 reachableNodes = GridManager.Instance.GetNodesInRange(CurrentGridPosition, myUnit.currentMovement, allowDiagonalMovement);
                 HighlightManager.Instance.ShowRange(reachableNodes);
             }
-            // DURUM 2: Seçiliyken başka yere tıklandı (Yürüme)
             else if (isSelected)
             {
-                // Başka bir birimin üstüne yürünmez (o birimi seçmek için tıklanmış olabilir)
                 if (IsOccupiedByOtherUnit(clickedGridPos))
                 {
                     isSelected = false;
@@ -98,7 +87,7 @@ public class UnitMovement : MonoBehaviour
                         isSelected = false;
                         HighlightManager.Instance.ClearHighlights();
 
-                        TurnManager.Instance.SetBusy(); // Yürürken turu kilitle
+                        TurnManager.Instance.SetBusy();
                         StartCoroutine(MoveAlongPath(path));
                     }
                 }
@@ -110,12 +99,55 @@ public class UnitMovement : MonoBehaviour
             }
         }
 
-        // Sağ tık ile seçimi iptal et
         if (Input.GetMouseButtonDown(1) && isSelected)
         {
             isSelected = false;
             HighlightManager.Instance.ClearHighlights();
         }
+    }
+
+    public bool IsMoving => isMoving;
+
+    public bool TryMoveNextTo(Vector2Int target, System.Action onArrive)
+    {
+        if (isMoving || !enabled) return false;
+        if (!TurnManager.Instance.IsInCombat()) myUnit.OnTurnStart();
+
+        List<Node> best = null;
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                Vector2Int c = target + new Vector2Int(dx, dy);
+                if (c == CurrentGridPosition)
+                {
+                    onArrive?.Invoke();
+                    return true;
+                }
+
+                Node node = GridManager.Instance.GetNode(c);
+                if (node == null || !node.isWalkable || IsOccupiedByOtherUnit(c)) continue;
+
+                List<Node> path = AStarPathfinding.FindPath(CurrentGridPosition, c, allowDiagonalMovement);
+                if (path == null || path.Count == 0 || path.Count > myUnit.currentMovement) continue;
+                if (best == null || path.Count < best.Count) best = path;
+            }
+        }
+
+        if (best == null) return false;
+
+        isSelected = false;
+        HighlightManager.Instance.ClearHighlights();
+        TurnManager.Instance.SetBusy();
+        StartCoroutine(MoveThen(best, onArrive));
+        return true;
+    }
+
+    private IEnumerator MoveThen(List<Node> path, System.Action onArrive)
+    {
+        yield return MoveAlongPath(path);
+        onArrive?.Invoke();
     }
 
     private bool IsOccupiedByOtherUnit(Vector2Int cell)
@@ -153,7 +185,6 @@ public class UnitMovement : MonoBehaviour
             CurrentGridPosition = node.gridPosition;
         }
 
-        // Yürüme bittiğinde adımları düş (Bu sayede UI çizgileri sönecek)
         myUnit.UseMovement(stepsTaken);
 
         isMoving = false;

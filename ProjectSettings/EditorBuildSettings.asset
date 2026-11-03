@@ -6,6 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: "Assets/Scenes/AnaMen\xFC.unity"
+    guid: 7ddd4beaf021cb94789f71976db1bad3
+  - enabled: 1
+    path: "Assets/Scenes/\xF6rnek level.unity"
+    guid: d5d483910465a294c95c299d424523b7
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
   m_configObjects:

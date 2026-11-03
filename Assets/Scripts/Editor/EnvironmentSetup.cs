@@ -7,23 +7,17 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Unity üst menüsünde: Level > Drone Sistemini Kur
-// - Kare sprite'ı, tüm kart assetlerini ve prefab'ları oluşturur (varsa dokunmaz: Inspector ayarların korunur)
-// - Sahnedeki eski düşmanları / hurda yığınını / varilleri prefab örnekleriyle değiştirir
-// - CardManager'a tur kartlarını bağlar, ana drone'u işaretler
-// Birden fazla kez çalıştırmak güvenlidir.
 public static class EnvironmentSetup
 {
     private const string CardsDir = "Assets/Cards";
     private const string DronesDir = "Assets/Prefabs/Dronlar";
     private const string EnvDir = "Assets/Prefabs/Cevre";
     private const string SpriteDir = "Assets/Sprites";
-    private const int PaidCost = 10; // yerden bulunan kartların varsayılan hurda bedeli
+    private const int PaidCost = 10;
 
     private static Sprite square;
     private static readonly Dictionary<string, CardData> cards = new Dictionary<string, CardData>();
 
-    // Eski "Temel Saldırı / Temel Savunma" kartlarını siler; ana drone: yakın + uzak saldırı, kalkan, şarj ile başlar
     [MenuItem("Level/Ana Drone Kartlarını Düzelt")]
     public static void FixMainCards()
     {
@@ -62,7 +56,6 @@ public static class EnvironmentSetup
         square = EnsureSquareSprite();
         BuildCards();
 
-        // Dost drone prefab'ları (kaynak: sahnedeki Player)
         GameObject allyMelee = MakeDrone("Drone_Dost_Yakin", "Dost Yakin Drone", DroneType.Melee, true, new Color(0.2f, 0.45f, 1f), 3, 4, 80, 0,
             new[] { "A_Yakin", "A_Stun", "A_Kalkan" }, null, null);
         GameObject allyRanged = MakeDrone("Drone_Dost_Uzak", "Dost Uzak Drone", DroneType.Ranged, true, new Color(1f, 0.9f, 0.1f), 3, 3, 30, 0,
@@ -70,12 +63,10 @@ public static class EnvironmentSetup
         GameObject allyBoss = MakeDrone("Drone_Dost_Boss", "Dost Boss Drone", DroneType.Boss, true, new Color(0.06f, 0.06f, 0.08f), 5, 3, 90, 0,
             new[] { "A_Guclu", "A_Taunt", "A_CPU" }, null, null);
 
-        // Blueprint kartları (çağırma bedeli: CPU + hurda)
         CardData bpMelee = Blueprint("BP_Yakin", "Blueprint: Yakın Drone", 3, allyMelee);
         CardData bpRanged = Blueprint("BP_Uzak", "Blueprint: Uzak Drone", 3, allyRanged);
         CardData bpBoss = Blueprint("BP_Boss", "Blueprint: Boss Drone", 5, allyBoss);
 
-        // Düşman prefab'ları (kaynak: sahnedeki Enemy)
         GameObject enMelee = MakeDrone("Drone_Dusman_Yakin", "Dusman Yakin Drone", DroneType.Melee, false, new Color(0.85f, 0.15f, 0.15f), 0, 4, 100, 20,
             null, new[] { "P_Yakin", "P_Stun", "P_Kalkan" }, bpMelee);
         GameObject enRanged = MakeDrone("Drone_Dusman_Uzak", "Dusman Uzak Drone", DroneType.Ranged, false, new Color(1f, 0.5f, 0.1f), 0, 3, 40, 15,
@@ -83,14 +74,11 @@ public static class EnvironmentSetup
         GameObject enBoss = MakeDrone("Drone_Dusman_Boss", "Dusman Boss Drone", DroneType.Boss, false, new Color(0.5f, 0.08f, 0.35f), 0, 3, 90, 45,
             null, new[] { "P_Guclu", "P_Taunt", "P_CPU" }, bpBoss);
 
-        // Çevre prefab'ları
         GameObject pilePrefab = MakePile(new List<CardData> { bpMelee, bpRanged, bpBoss });
         GameObject barrelPrefab = MakeBarrel();
 
-        // Sahne
         ConfigureScene(enMelee, enRanged, enBoss, pilePrefab, barrelPrefab);
 
-        // Eski müttefik kartı artık kullanılmıyor
         AssetDatabase.DeleteAsset(CardsDir + "/MuttefikCagir.asset");
 
         AssetDatabase.SaveAssets();
@@ -101,14 +89,11 @@ public static class EnvironmentSetup
         Debug.Log("<color=green>Drone sistemi kuruldu, sahne kaydedildi.</color>");
     }
 
-    // ---------- Sprite ----------
-
     private static Sprite EnsureSquareSprite()
     {
         string path = SpriteDir + "/Kare.png";
         if (!File.Exists(path))
         {
-            // 32x32: kenarlarda 4 piksel şeffaf boşluk, ortası beyaz kare
             Texture2D t = new Texture2D(32, 32, TextureFormat.RGBA32, false);
             for (int y = 0; y < 32; y++)
                 for (int x = 0; x < 32; x++)
@@ -127,8 +112,6 @@ public static class EnvironmentSetup
         }
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
-
-    // ---------- Kartlar ----------
 
     private static CardData Card(string file, string name, CardType type, int cpu, int scrap, Action<CardData> init)
     {
@@ -152,19 +135,15 @@ public static class EnvironmentSetup
     {
         cards.Clear();
 
-        // Ana drone: her tur elde olan kartlar (bedelsiz)
         Card("AnaKalkan", "Kalkan", CardType.Defense, 1, 0, c => c.shield = 15);
         Card("Sarj", "Şarj", CardType.Utility, 1, 0, c => c.chargeAll = 1);
         Card("YakinSaldiri", "Yakın Saldırı", CardType.Attack, 1, 0, c => { c.damage = 20; c.range = 1; });
         Card("UzakSaldiri", "Uzak Saldırı", CardType.Attack, 1, 0, c => { c.damage = 15; c.range = 4; });
 
-        // Yerden bulunan / düşen kartlar (hurda bedelli, tek kullanımlık)
         BuildFamily("P_", PaidCost, 1);
-        // Dost drone kitleri (bedelsiz, CPU yok)
         BuildFamily("A_", 0, 0);
     }
 
-    // Aynı efektlerin farklı bedelli sürümleri: P_ (yerden, hurda bedelli) ve A_ (dost drone kiti)
     private static void BuildFamily(string prefix, int scrap, int cpu)
     {
         Card(prefix + "Kalkan", "Kalkan", CardType.Defense, cpu, scrap, c => c.shield = 15);
@@ -189,8 +168,6 @@ public static class EnvironmentSetup
         return c;
     }
 
-    // ---------- Drone prefab'ları ----------
-
     private static GameObject MakeDrone(string file, string displayName, DroneType type, bool ally, Color color,
                                         int charge, int move, int hp, int damage,
                                         string[] kitKeys, string[] dropKeys, CardData blueprint)
@@ -199,7 +176,6 @@ public static class EnvironmentSetup
         GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
         if (existing != null) return existing;
 
-        // Ana drone ayarlandıktan sonra sahnede "Player" hep var; düşman kaynağı "Enemy" ilk çalıştırmada var
         GameObject src = GameObject.Find(ally ? "Player" : "Enemy");
         if (src == null)
         {
@@ -212,7 +188,6 @@ public static class EnvironmentSetup
         clone.transform.position = Vector3.zero;
         Debug.Log(file + " kaynak kök ölçeği: " + src.transform.localScale);
 
-        // Kaynağın animasyonu sprite'ı ezmesin
         foreach (Animator a in clone.GetComponentsInChildren<Animator>(true)) UnityEngine.Object.DestroyImmediate(a);
 
         SpriteRenderer sr = clone.GetComponent<SpriteRenderer>();
@@ -264,8 +239,6 @@ public static class EnvironmentSetup
         return prefab;
     }
 
-    // ---------- Çevre prefab'ları ----------
-
     private static GameObject MakePile(List<CardData> blueprints)
     {
         string path = EnvDir + "/HurdaYigini.prefab";
@@ -312,11 +285,8 @@ public static class EnvironmentSetup
         return prefab;
     }
 
-    // ---------- Sahne ----------
-
     private static void ConfigureScene(GameObject enMelee, GameObject enRanged, GameObject enBoss, GameObject pile, GameObject barrel)
     {
-        // Ana drone: işaretle, boss çağırabilsin diye CPU üst sınırını en az 6 yap
         GameObject player = GameObject.Find("Player");
         if (player != null)
         {
@@ -327,7 +297,6 @@ public static class EnvironmentSetup
             pu.ApplyModifiedProperties();
         }
 
-        // CardManager: her tur elde olacak kartlar
         CardManager cm = UnityEngine.Object.FindFirstObjectByType<CardManager>();
         if (cm != null)
         {
@@ -347,7 +316,6 @@ public static class EnvironmentSetup
         Replace("Patlayan Varil (2)", barrel);
     }
 
-    // Eski sahne objesini aynı konumdaki prefab örneğiyle değiştirir (zaten prefab örneğiyse dokunmaz)
     private static void Replace(string objName, GameObject prefab)
     {
         if (prefab == null) return;

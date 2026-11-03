@@ -1,6 +1,5 @@
 using System;
 
-// Toplanan hurda miktarı (şimdilik sadece sayaç)
 public static class ScrapInventory
 {
     public static int Count { get; private set; }
@@ -20,7 +19,6 @@ public static class ScrapInventory
         return true;
     }
 
-    // Sahne yeniden yüklenince sıfırlamak için
     public static void Reset()
     {
         Count = 0;

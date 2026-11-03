@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Ölen düşman drone'un yere bıraktığı ganimet. Bir drone'umuz üstüne yürüyünce toplanır.
 public class LootPickup : MonoBehaviour
 {
     private int scrap;
@@ -55,7 +54,7 @@ public class LootPickup : MonoBehaviour
         }
 
         TurnManager tm = TurnManager.Instance;
-        if (tm == null || tm.CurrentState != TurnState.PlayerTurn) return; // yürürken değil, durunca topla
+        if (tm == null || tm.CurrentState != TurnState.PlayerTurn) return;
 
         Vector3 center = gm.GetWorldPosition(cell);
         foreach (Unit u in tm.playerUnits)

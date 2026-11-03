@@ -1,10 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Kart kaynaklı patlamalar (kendini patlatma). Varilin patlaması ExplosiveBarrel içinde.
 public static class BlastUtil
 {
-    // center çevresinde Chebyshev yarıçapı kadar kareye, dost-düşman ayırmadan hasar verir.
     public static void Explode(Vector2Int center, int radius, int damage, Unit exclude)
     {
         GridManager gm = GridManager.Instance;

@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// Tek bir kartın arayüzü (Card prefab'ının üzerine eklenir)
 public class CardView : MonoBehaviour
 {
     [Header("Bağlantılar")]

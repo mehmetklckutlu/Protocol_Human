@@ -1,12 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Eldeki kartları ekranın altında gösterir.
-// DİKKAT: Bu script hep aktif bir objede (ör. Canvas) durmalı; savaşta açılıp kapanacak panel "Hand Root" olmalı.
 public class CardHandUI : MonoBehaviour
 {
-    [SerializeField] private GameObject handRoot;   // Sadece savaşta görünen panel
-    [SerializeField] private Transform container;   // Kartların dizildiği Horizontal Layout Group
+    [SerializeField] private GameObject handRoot;
+    [SerializeField] private Transform container;
     [SerializeField] private CardView cardPrefab;
 
     private void Start()

@@ -8,7 +8,7 @@ public class TurnOrderUI : MonoBehaviour
 
     [Header("Arayüz Ayarları")]
     public GameObject portraitPrefab;
-    public Transform container; // Kayan ikonların durduğu Layout Group
+    public Transform container;
 
     [Header("Aktif Karakter (Seçili Karo)")]
     public Image activeUnitPortrait;
@@ -24,7 +24,6 @@ public class TurnOrderUI : MonoBehaviour
     {
         Instance = this;
 
-        // Oyun başında aktif portreleri gizliyoruz
         if (activeUnitPortrait != null) activeUnitPortrait.gameObject.SetActive(false);
         if (activeUnitFrame != null) activeUnitFrame.SetActive(false);
     }
@@ -63,7 +62,6 @@ public class TurnOrderUI : MonoBehaviour
         }
     }
 
-    // Ölen birimin ikonunu kuyruktan siler
     public void RemoveUnit(Unit unit)
     {
         if (unit != null && portraitDict.ContainsKey(unit))
@@ -73,7 +71,6 @@ public class TurnOrderUI : MonoBehaviour
         }
     }
 
-    // Savaş bitince tüm tur sırası arayüzünü temizler ve gizler
     public void ClearAll()
     {
         portraitDict.Clear();
@@ -97,11 +94,10 @@ public class TurnOrderUI : MonoBehaviour
     {
         if (portraitDict.ContainsKey(activeUnit))
         {
-            Destroy(portraitDict[activeUnit]); // Sola kaymayı tetikler
+            Destroy(portraitDict[activeUnit]);
             portraitDict.Remove(activeUnit);
         }
 
-        // Sadece savaş modundaysak aktif portreyi gösteriyoruz
         if (TurnManager.Instance != null && TurnManager.Instance.IsInCombat())
         {
             if (activeUnitPortrait != null)
@@ -114,7 +110,6 @@ public class TurnOrderUI : MonoBehaviour
         }
         else
         {
-            // Savaş bittiyse (veya başlamadıysa) tamamen gizle
             if (activeUnitPortrait != null) activeUnitPortrait.gameObject.SetActive(false);
             if (activeUnitFrame != null) activeUnitFrame.SetActive(false);
         }

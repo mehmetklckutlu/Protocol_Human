@@ -1,10 +1,11 @@
 using UnityEngine;
 using System;
+using System.Collections;
 
 public class Unit : MonoBehaviour
 {
     [Header("Taraf Ayarı")]
-    public bool isPlayerOwned = true; // True ise senin/dost, False ise düşman
+    public bool isPlayerOwned = true;
 
     [Header("Sağlık (HP)")]
     public int maxHealth = 120;
@@ -35,32 +36,43 @@ public class Unit : MonoBehaviour
     public int stunTurns;
     public int tauntTurns;
 
-    // UI'ın değerleri anında güncellemesi için olay (Event)
     public event Action OnStatsChanged;
     public event Action<Unit> OnDeath;
     private bool dead;
+    public bool IsDead => dead;
+
+    [Header("Animasyon")]
+    [Tooltip("Boş bırakılırsa bu objede veya çocuklarında Animator aranır.")]
+    [SerializeField] private Animator animator;
+    [Tooltip("Ölüm animasyonu için en fazla beklenecek süre (saniye).")]
+    [SerializeField, Min(0f)] private float maxDeathAnimTime = 2f;
 
     private void Awake()
     {
         currentHealth = maxHealth;
+        if (animator == null) animator = AnimUtil.Find(this);
+    }
+
+    public void PlayAttack()
+    {
+        if (dead) return;
+        AnimUtil.Trigger(animator, AnimUtil.Attack);
     }
 
     private void Start()
     {
-        // Karakter doğduğunda kendini TurnManager'a kaydettirir
         if (TurnManager.Instance != null)
         {
             TurnManager.Instance.RegisterUnit(this);
         }
     }
 
-    // Tur bu karaktere geldiğinde (TurnManager çağırır)
     public void OnTurnStart()
     {
         currentMovement = maxMovement;
         bool inCombat = TurnManager.Instance != null && TurnManager.Instance.IsInCombat();
         currentCPU = (usesCpu && inCombat) ? Mathf.Min(maxCPU, currentCPU + cpuPerTurn) : maxCPU;
-        currentShield = 0; // Kalkan her tur başında sıfırlanır
+        currentShield = 0;
         cardsPlayedThisTurn = 0;
         NotifyUI();
     }
@@ -77,7 +89,6 @@ public class Unit : MonoBehaviour
         NotifyUI();
     }
 
-    // Anında yok eder (şarj bitti, kendini patlatma)
     public void Kill()
     {
         if (dead) return;
@@ -89,7 +100,6 @@ public class Unit : MonoBehaviour
     public void TakeDamage(int damage)
     {
         if (dead) return;
-        // Önce kalkan eriyor, kalan hasar cana gidiyor
         if (currentShield > 0)
         {
             int absorbed = Mathf.Min(currentShield, damage);
@@ -132,12 +142,40 @@ public class Unit : MonoBehaviour
         dead = true;
         Debug.Log(gameObject.name + " yok edildi!");
 
-        OnDeath?.Invoke(this); // loot vb.
+        OnDeath?.Invoke(this);
+
+        bool hasAnim = AnimUtil.Trigger(animator, AnimUtil.Die);
+        bool lost = false;
 
         if (TurnManager.Instance != null)
         {
             TurnManager.Instance.UnregisterUnit(this);
-            if (isMainDrone) TurnManager.Instance.GameOver();
+            if (isMainDrone)
+            {
+                TurnManager.Instance.GameOver(!hasAnim);
+                lost = true;
+            }
+        }
+
+        if (hasAnim)
+        {
+            UnitMovement move = GetComponent<UnitMovement>();
+            if (move != null) move.enabled = false;
+            EnemyAI ai = GetComponent<EnemyAI>();
+            if (ai != null) ai.enabled = false;
+            StartCoroutine(DeathRoutine(lost));
+        }
+        else
+            Destroy(gameObject);
+    }
+
+    private IEnumerator DeathRoutine(bool showGameOver)
+    {
+        yield return AnimUtil.WaitForState(animator, AnimUtil.Die, maxDeathAnimTime);
+        if (showGameOver)
+        {
+            GameOverUI.Show();
+            yield break;
         }
         Destroy(gameObject);
     }

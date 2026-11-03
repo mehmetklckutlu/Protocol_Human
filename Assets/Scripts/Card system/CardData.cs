@@ -1,12 +1,7 @@
 using UnityEngine;
 
-// Attack  : hedef seçilen saldırı kartı (hasar, menzil, isabet şansı, stun)
-// Defense : anında kullanılan kart (kalkan, taunt)
-// Summon  : blueprint; savaşta drone çağırır
-// Utility : anında kullanılan diğer kartlar (CPU yenileme, şarj, kendini patlatma)
 public enum CardType { Attack, Defense, Summon, Utility }
 
-// Project penceresinde: sağ tık > Create > Kartlar > Kart  ile yeni kart oluşturulur
 [CreateAssetMenu(fileName = "YeniKart", menuName = "Kartlar/Kart")]
 public class CardData : ScriptableObject
 {
@@ -50,7 +45,6 @@ public class CardData : ScriptableObject
     [Tooltip("Çağrılacak dost drone prefab'ı.")]
     public GameObject summonPrefab;
 
-    // Kartın ana sayısı (UI'da büyük yazılır)
     public int MainValue
     {
         get
@@ -68,7 +62,6 @@ public class CardData : ScriptableObject
         }
     }
 
-    // Açıklama boşsa otomatik üretilir
     public string GetDescription()
     {
         string text;

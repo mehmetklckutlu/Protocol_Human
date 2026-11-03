@@ -8,10 +8,10 @@ public class UnitWorldUI : MonoBehaviour
     private Unit targetUnit;
 
     [Header("Sağlık Barı")]
-    [SerializeField] private Image healthFillImage; // İçini dolduracağımız bar
+    [SerializeField] private Image healthFillImage;
 
     [Header("Kalkan Göstergesi (isteğe bağlı)")]
-    [SerializeField] private TMP_Text shieldText; // Kalkan 0 ise gizlenir
+    [SerializeField] private TMP_Text shieldText;
 
     [Header("Hareket Göstergesi")]
     [SerializeField] private GameObject movePipPrefab;
@@ -29,7 +29,7 @@ public class UnitWorldUI : MonoBehaviour
 
     private void Awake()
     {
-        targetUnit = GetComponentInParent<Unit>(); // Kendini karakterin üstündeki Unit koduna bağlar
+        targetUnit = GetComponentInParent<Unit>();
     }
 
     private void Start()
@@ -38,7 +38,7 @@ public class UnitWorldUI : MonoBehaviour
         {
             InitializePips();
             targetUnit.OnStatsChanged += UpdateVisuals;
-            UpdateVisuals(); // İlk değerleri yazdır
+            UpdateVisuals();
         }
     }
 
@@ -52,14 +52,12 @@ public class UnitWorldUI : MonoBehaviour
 
     private void InitializePips()
     {
-        // Hareket çizgilerini oluştur
         for (int i = 0; i < targetUnit.maxMovement; i++)
         {
             GameObject pip = Instantiate(movePipPrefab, moveContainer);
             spawnedMovePips.Add(pip.GetComponent<Image>());
         }
 
-        // CPU çizgilerini oluştur
         for (int i = 0; i < targetUnit.maxCPU; i++)
         {
             GameObject pip = Instantiate(cpuPipPrefab, cpuContainer);
@@ -69,36 +67,28 @@ public class UnitWorldUI : MonoBehaviour
 
     private void UpdateVisuals()
     {
-
-        // YENİ: Savaşta değilsek CPU konteynerini tamamen kapat
         if (cpuContainer != null && TurnManager.Instance != null)
         {
             cpuContainer.gameObject.SetActive(TurnManager.Instance.IsInCombat());
         }
 
-        // Eski kodlar aşağıda aynen kalacak...
         if (healthFillImage != null) healthFillImage.fillAmount = (float)targetUnit.currentHealth / targetUnit.maxHealth;
-        // ...
-        // 1. Sağlık Barı Güncellemesi (Örn: 560 / 1120 = %50 doluluk)
         if (healthFillImage != null)
         {
             healthFillImage.fillAmount = (float)targetUnit.currentHealth / targetUnit.maxHealth;
         }
 
-        // Kalkan yazısı
         if (shieldText != null)
         {
             shieldText.gameObject.SetActive(targetUnit.currentShield > 0);
             shieldText.text = targetUnit.currentShield.ToString();
         }
 
-        // 2. Hareket Çizgilerini Güncelle
         for (int i = 0; i < spawnedMovePips.Count; i++)
         {
             spawnedMovePips[i].color = (i < targetUnit.currentMovement) ? moveActiveColor : moveUsedColor;
         }
 
-        // 3. CPU Çizgilerini Güncelle
         for (int i = 0; i < spawnedCpuPips.Count; i++)
         {
             spawnedCpuPips[i].color = (i < targetUnit.currentCPU) ? cpuActiveColor : cpuUsedColor;

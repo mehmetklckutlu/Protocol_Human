@@ -5,7 +5,7 @@ public class HighlightManager : MonoBehaviour
 {
     public static HighlightManager Instance { get; private set; }
 
-    [SerializeField] private GameObject highlightPrefab; // Mavi renkli kare prefabımız
+    [SerializeField] private GameObject highlightPrefab;
 
     private List<GameObject> activeHighlights = new List<GameObject>();
 
@@ -14,14 +14,12 @@ public class HighlightManager : MonoBehaviour
         Instance = this;
     }
 
-    // Seçilen karelerin üzerine mavi prefabları yerleştirir
     public void ShowRange(List<Node> nodes)
     {
-        ClearHighlights(); // Önce eskileri temizle
+        ClearHighlights();
 
         foreach (Node node in nodes)
         {
-            // Orijinal noktanın biraz üzerine (Z ekseninde) koyalım ki yerin altında kalmasın
             Vector3 spawnPos = node.worldPosition;
             spawnPos.z = -0.5f;
 
@@ -30,7 +28,6 @@ public class HighlightManager : MonoBehaviour
         }
     }
 
-    // Ekranda parlayan tüm kareleri siler
     public void ClearHighlights()
     {
         foreach (GameObject obj in activeHighlights)

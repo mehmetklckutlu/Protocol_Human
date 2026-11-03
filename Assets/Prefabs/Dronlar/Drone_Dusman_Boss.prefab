@@ -397,6 +397,7 @@ GameObject:
   - component: {fileID: 5299835206639363073}
   - component: {fileID: 1995272634380976764}
   - component: {fileID: 1555260985131835967}
+  - component: {fileID: 1389475650985021176}
   m_Layer: 0
   m_Name: Drone_Dusman_Boss
   m_TagString: Untagged
@@ -498,6 +499,7 @@ MonoBehaviour:
   currentMovement: 0
   maxCPU: 2
   currentCPU: 0
+  cpuPerTurn: 2
   currentShield: 0
   isMainDrone: 0
   usesCpu: 1
@@ -505,6 +507,8 @@ MonoBehaviour:
   cardsPlayedThisTurn: 0
   stunTurns: 0
   tauntTurns: 0
+  animator: {fileID: 0}
+  maxDeathAnimTime: 2
 --- !u!114 &1995272634380976764
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -551,3 +555,25 @@ MonoBehaviour:
   - {fileID: 11400000, guid: de3dbaedeab24a34eb74bfbbc9478001, type: 2}
   blueprint: {fileID: 11400000, guid: dee79491a5decb249a1a043cd2106bbd, type: 2}
   blueprintChance: 0.25
+--- !u!95 &1389475650985021176
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7428003302021764160}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 630c696537d7f214f85ecaa0d1c7047b, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

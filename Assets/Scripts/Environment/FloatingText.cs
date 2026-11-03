@@ -1,7 +1,6 @@
 using UnityEngine;
 using TMPro;
 
-// Dünyada yukarı süzülüp kaybolan yazı (hasar, ıska, stun, loot bildirimi)
 public class FloatingText : MonoBehaviour
 {
     private TextMeshPro tmp;
@@ -10,7 +9,6 @@ public class FloatingText : MonoBehaviour
 
     public static void Spawn(Vector3 worldPos, string text, Color color, int line = 0)
     {
-        // Sisteki (görünmeyen) karelerde yazı gösterme
         if (FogOfWar.Instance != null && GridManager.Instance != null &&
             !FogOfWar.Instance.IsVisible(GridManager.Instance.GetGridPosition(worldPos)))
             return;

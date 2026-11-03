@@ -42,10 +42,8 @@ public class EnemyAI : MonoBehaviour
     {
         if (isAwake) return;
 
-        // Sahnede TurnManager veya GridManager yoksa (eksik kurulum) hata vermeden bekle
         if (TurnManager.Instance == null || GridManager.Instance == null) return;
 
-        // Sahnedeki HERHANGİ bir oyuncu birimi menzildeyse ve arada duvar yoksa uyan
         foreach (Unit target in TurnManager.Instance.playerUnits)
         {
             if (target == null) continue;
@@ -57,7 +55,7 @@ public class EnemyAI : MonoBehaviour
             if (distanceToTarget > visionRange) continue;
 
             RaycastHit2D hit = Physics2D.Linecast(transform.position, target.transform.position, obstacleLayer);
-            if (hit.collider != null) continue; // Arada duvar var
+            if (hit.collider != null) continue;
 
             WakeUp();
             return;
@@ -71,7 +69,6 @@ public class EnemyAI : MonoBehaviour
 
         TurnManager.Instance.UpdateCombatState();
 
-        // İlk uyanan düşman zaten UpdateCombatState içinde kuyruğa eklenir; sonrakiler burada eklenir
         if (TurnOrderUI.Instance != null)
             TurnOrderUI.Instance.AddUnitToQueue(myUnit);
 
@@ -83,7 +80,6 @@ public class EnemyAI : MonoBehaviour
         return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
     }
 
-    // Hedef seçimi: taunt > hedef moduna göre
     private Unit PickTarget()
     {
         TurnManager tm = TurnManager.Instance;
@@ -124,7 +120,6 @@ public class EnemyAI : MonoBehaviour
     {
         if (!isAwake) yield break;
 
-        // Stun: bu turu geçer
         if (myUnit.stunTurns > 0)
         {
             myUnit.stunTurns--;
@@ -138,7 +133,6 @@ public class EnemyAI : MonoBehaviour
 
         while (myUnit.currentCPU > 0)
         {
-            // Her adımda hedefi yeniden seç (hedef ölmüş olabilir)
             Unit target = PickTarget();
             if (target == null) break;
 
@@ -150,6 +144,7 @@ public class EnemyAI : MonoBehaviour
             {
                 Debug.Log($"<color=orange>{gameObject.name} SALDIRDI!</color>");
                 myUnit.UseCPU(1);
+                myUnit.PlayAttack();
                 target.TakeDamage(attackDamage);
                 hasAttackedThisTurn = true;
                 yield return new WaitForSeconds(0.5f);
@@ -190,7 +185,6 @@ public class EnemyAI : MonoBehaviour
                     currentPos = node.gridPosition;
                     myUnit.UseMovement(1);
 
-                    // Menzile girdiyse daha fazla yaklaşma
                     if (target != null && Dist(currentPos, targetPos) <= attackRange) break;
                 }
             }

@@ -2,10 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Patlayan varil: bir saldırı kartıyla hedef alınıp vurulunca patlar, çevresindeki karelere hasar verir.
-// Zincirleme: patlama alanındaki başka variller de patlar.
-// Kart hedef seçerken fareyi varilin üstüne getirince patlama alanı kırmızı gösterilir.
-// Şimdilik kutu görseli kullanır; kendi sprite'ını bu objedeki SpriteRenderer'a atayabilirsin.
 public class ExplosiveBarrel : MonoBehaviour
 {
     public static readonly List<ExplosiveBarrel> All = new List<ExplosiveBarrel>();
@@ -22,6 +18,12 @@ public class ExplosiveBarrel : MonoBehaviour
     [SerializeField] private Color previewColor = new Color(1f, 0.15f, 0.1f, 0.4f);
     [SerializeField] private Color blastColor = new Color(1f, 0.65f, 0.1f, 0.85f);
 
+    [Header("Animasyon")]
+    [Tooltip("Boş bırakılırsa bu objede veya çocuklarında Animator aranır.")]
+    [SerializeField] private Animator animator;
+    [Tooltip("Patlama animasyonu için en fazla beklenecek süre (saniye).")]
+    [SerializeField, Min(0f)] private float maxExplodeAnimTime = 2f;
+
     public Vector2Int Cell { get; private set; }
 
     private GridManager gm;
@@ -30,6 +32,11 @@ public class ExplosiveBarrel : MonoBehaviour
 
     private void OnEnable() { if (!All.Contains(this)) All.Add(this); }
     private void OnDisable() { All.Remove(this); }
+
+    private void Awake()
+    {
+        if (animator == null) animator = AnimUtil.Find(this);
+    }
 
     private void Start()
     {
@@ -53,7 +60,6 @@ public class ExplosiveBarrel : MonoBehaviour
         sr.sortingOrder = 3;
     }
 
-    // Patlama alanındaki kareler (grid dışı ve merkez dahil)
     public List<Vector2Int> GetBlastCells()
     {
         List<Vector2Int> cells = new List<Vector2Int>();
@@ -65,8 +71,6 @@ public class ExplosiveBarrel : MonoBehaviour
             }
         return cells;
     }
-
-    // ---------- Önizleme ----------
 
     public void ShowPreview()
     {
@@ -92,12 +96,11 @@ public class ExplosiveBarrel : MonoBehaviour
         foreach (SpriteRenderer s in previewTiles) if (s != null) Destroy(s.gameObject);
     }
 
-    // ---------- Patlama ----------
-
     public void Explode()
     {
         if (exploded) return;
         exploded = true;
+        All.Remove(this);
         HidePreview();
 
         List<Vector2Int> cells = GetBlastCells();
@@ -106,11 +109,9 @@ public class ExplosiveBarrel : MonoBehaviour
         Node n = gm.GetNode(Cell);
         if (n != null) n.isWalkable = true;
 
-        // Görsel efekt
         GameObject fx = new GameObject("BlastFx");
         fx.AddComponent<BlastFx>().Play(cells, gm, blastColor);
 
-        // Alandaki birimlere hasar (kopya listeler: biri ölürse liste bozulmasın)
         TurnManager tm = TurnManager.Instance;
         if (tm != null)
         {
@@ -118,14 +119,21 @@ public class ExplosiveBarrel : MonoBehaviour
             DamageUnits(new List<Unit>(tm.enemyUnits), set);
         }
 
-        // Alandaki diğer variller zincirleme patlar
         foreach (ExplosiveBarrel other in new List<ExplosiveBarrel>(All))
         {
             if (other != null && other != this && !other.exploded && set.Contains(other.Cell))
                 other.StartCoroutine(other.ExplodeAfter(chainDelay));
         }
 
-        // Bu objeyi gizle; zincir coroutine'leri başkalarında çalıştığı için güvenle yok edilebilir
+        if (AnimUtil.Trigger(animator, AnimUtil.Explode))
+            StartCoroutine(DestroyAfterAnim());
+        else
+            Destroy(gameObject);
+    }
+
+    private IEnumerator DestroyAfterAnim()
+    {
+        yield return AnimUtil.WaitForState(animator, AnimUtil.Explode, maxExplodeAnimTime);
         Destroy(gameObject);
     }
 
@@ -146,7 +154,6 @@ public class ExplosiveBarrel : MonoBehaviour
     }
 }
 
-// Patlama alanını kısa süre turuncu gösterip kaybolan efekt
 public class BlastFx : MonoBehaviour
 {
     public void Play(List<Vector2Int> cells, GridManager gm, Color color)

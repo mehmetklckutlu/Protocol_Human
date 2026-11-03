@@ -6,9 +6,6 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
-// Unity üst menüsünde: Kartlar > Kurulumu Yap
-// Kart assetlerini, CardManager'ı, kart prefab'ını ve ekrandaki el panelini otomatik kurar.
-// Birden fazla kez çalıştırmak güvenlidir (var olanları tekrar oluşturmaz).
 public static class CardSystemSetup
 {
     [MenuItem("Kartlar/Kurulumu Yap")]
@@ -17,10 +14,6 @@ public static class CardSystemSetup
         EnsureFolder("Assets", "Cards");
         EnsureFolder("Assets", "Prefabs");
 
-        // 1) Temel kartlar (varsa dokunmaz, böylece Inspector'da yaptığın ayarlar korunur)
-        // (Eski "Temel Saldırı / Temel Savunma" kartları kaldırıldı; ana drone kartları Level > Drone Sistemini Kur ile gelir.)
-
-        // 2) CardManager
         CardManager cm = Object.FindFirstObjectByType<CardManager>();
         if (cm == null)
         {
@@ -29,10 +22,8 @@ public static class CardSystemSetup
             cm = go.AddComponent<CardManager>();
         }
 
-        // 3) Kart prefab'ı
         CardView cardPrefab = GetOrCreateCardPrefab("Assets/Prefabs/Card.prefab");
 
-        // 4) El paneli (sadece yoksa kurulur)
         if (Object.FindFirstObjectByType<CardHandUI>() == null)
         {
             Canvas canvas = null;
@@ -82,8 +73,6 @@ public static class CardSystemSetup
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Debug.Log("<color=green>Kart sistemi kuruldu.</color> Sahneyi kaydetmeyi (Ctrl+S) unutma.");
     }
-
-    // ---------- Yardımcılar ----------
 
     private static void EnsureFolder(string parent, string name)
     {
@@ -150,7 +139,7 @@ public static class CardSystemSetup
         rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
         Image img = go.GetComponent<Image>();
         img.raycastTarget = false;
-        img.enabled = false; // ikon verilince CardView açar
+        img.enabled = false;
         return img;
     }
 
@@ -166,7 +155,7 @@ public static class CardSystemSetup
         t.fontSize = size;
         t.color = color;
         t.alignment = TextAlignmentOptions.Center;
-        t.raycastTarget = false; // tıklamayı butona bırak
+        t.raycastTarget = false;
         return t;
     }
 }

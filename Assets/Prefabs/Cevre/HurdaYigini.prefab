@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 9079977197094908841}
   - component: {fileID: 3012323944246244173}
   - component: {fileID: 4549380523428030797}
+  - component: {fileID: 4918675454777846919}
   m_Layer: 0
   m_Name: HurdaYigini
   m_TagString: Untagged
@@ -119,3 +120,26 @@ MonoBehaviour:
   bodyColor: {r: 0.45, g: 0.35, b: 0.25, a: 1}
   depletedColor: {r: 0.22, g: 0.2, b: 0.2, a: 1}
   glowColor: {r: 0.2, g: 1, b: 0.35, a: 1}
+  animator: {fileID: 0}
+--- !u!95 &4918675454777846919
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1324720501276321862}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 2a7df21d358db2f479c7813325a670d8, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

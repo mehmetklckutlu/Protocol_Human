@@ -89,6 +89,7 @@ GameObject:
   - component: {fileID: 4197900216917316742}
   - component: {fileID: 8370718235728996258}
   - component: {fileID: 2231194052092226583}
+  - component: {fileID: 4183446899936856590}
   m_Layer: 0
   m_Name: Drone_Dusman_Yakin
   m_TagString: Untagged
@@ -190,6 +191,7 @@ MonoBehaviour:
   currentMovement: 0
   maxCPU: 2
   currentCPU: 0
+  cpuPerTurn: 2
   currentShield: 0
   isMainDrone: 0
   usesCpu: 1
@@ -197,6 +199,8 @@ MonoBehaviour:
   cardsPlayedThisTurn: 0
   stunTurns: 0
   tauntTurns: 0
+  animator: {fileID: 0}
+  maxDeathAnimTime: 2
 --- !u!114 &8370718235728996258
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -243,6 +247,28 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 483ee814b634d2f4a9cca7db0007b2f7, type: 2}
   blueprint: {fileID: 11400000, guid: c4d0f152999135548857c0b4652e42a1, type: 2}
   blueprintChance: 0.25
+--- !u!95 &4183446899936856590
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1804177390321781009}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 630c696537d7f214f85ecaa0d1c7047b, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &2930158594289611831
 GameObject:
   m_ObjectHideFlags: 0

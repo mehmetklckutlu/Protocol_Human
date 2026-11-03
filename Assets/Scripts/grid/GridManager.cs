@@ -23,7 +23,6 @@ public class GridManager : MonoBehaviour
 
     private Node[,] grid;
 
-    // Dışarıdan okunabilir grid bilgileri (FogOfWar vb. kullanır)
     public Vector2Int GridSize => gridSize;
     public float CellSize => cellSize;
     public Vector3 GridOrigin => gridOrigin;
@@ -51,10 +50,8 @@ public class GridManager : MonoBehaviour
                 Vector2Int gridPos = new Vector2Int(x, y);
                 Vector3 worldPos = GetWorldPosition(gridPos);
 
-                // Fizik kontrolü ile engelleri tespit etme (Box overlap)
                 bool isWalkable = !Physics2D.OverlapBox(worldPos, Vector2.one * (cellSize * 0.8f), 0f, unwalkableLayer);
 
-                // Tilemap'ten gelen kurallar (atanmadıysa eski davranış aynen sürer)
                 if (isWalkable && floorTilemap != null)
                     isWalkable = floorTilemap.HasTile(floorTilemap.WorldToCell(worldPos));
                 if (isWalkable && wallTilemap != null)
@@ -92,7 +89,6 @@ public class GridManager : MonoBehaviour
         return gridPos.x >= 0 && gridPos.x < gridSize.x && gridPos.y >= 0 && gridPos.y < gridSize.y;
     }
 
-    // Komşu kareleri getirir (Çapraz veya Dik)
     public List<Node> GetNeighbors(Node node, bool allowDiagonal = false)
     {
         List<Node> neighbors = new List<Node>();
@@ -162,17 +158,14 @@ public class GridManager : MonoBehaviour
 
             int currentCost = costs[currentNode];
 
-            // Eğer maksimum menzile ulaştıysak bu yönde daha fazla ilerleme
             if (currentCost >= maxSteps) continue;
 
             foreach (Node neighbor in GetNeighbors(currentNode, allowDiagonal))
             {
-                // Engel varsa atla
                 if (!neighbor.isWalkable) continue;
 
-                int newCost = currentCost + 1; // Her adım 1 AP/Menzil harcar
+                int newCost = currentCost + 1;
 
-                // Komşuya daha önce gitmediysek veya daha kısa bir yoldan ulaştıysak listeye ekle
                 if (!costs.ContainsKey(neighbor) || newCost < costs[neighbor])
                 {
                     costs[neighbor] = newCost;

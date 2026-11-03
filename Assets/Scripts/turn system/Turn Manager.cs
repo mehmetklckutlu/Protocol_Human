@@ -1,4 +1,3 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -15,16 +14,15 @@ public class TurnManager : MonoBehaviour
     public List<Unit> enemyUnits = new List<Unit>();
 
     [Header("Arayüz (UI)")]
-    public GameObject enemyAlertUI; // Uyanma yazısı (Düşman Hareketi)
-    public GameObject endTurnButton; // Turu Bitir Butonu
-    public GameObject roundEndUI; // Tur Bitti yazısı
+    public GameObject enemyAlertUI;
+    public GameObject endTurnButton;
+    public GameObject roundEndUI;
 
-    // Oyuncu tarafında her drone'un kendi turu var: sıra bu listede ilerler
     private readonly List<Unit> playerQueue = new List<Unit>();
     public Unit CurrentPlayerUnit { get; private set; }
 
     private TurnState previousState;
-    private bool wasInCombat = false; // Savaşa GEÇİŞİ yakalamak için
+    private bool wasInCombat = false;
 
     private void Awake()
     {
@@ -34,7 +32,7 @@ public class TurnManager : MonoBehaviour
     private void Start()
     {
         StartPlayerTurn();
-        UpdateCombatState(); // Oyun başlarken butonları/UI'ı duruma göre gizler
+        UpdateCombatState();
     }
 
     public bool IsInCombat()
@@ -43,7 +41,7 @@ public class TurnManager : MonoBehaviour
         {
             if (enemy == null) continue;
             EnemyAI ai = enemy.GetComponent<EnemyAI>();
-            if (ai != null && ai.isAwake) return true; // Biri bile uyanıksa savaş modundayız!
+            if (ai != null && ai.isAwake) return true;
         }
         return false;
     }
@@ -55,14 +53,11 @@ public class TurnManager : MonoBehaviour
         if (endTurnButton != null)
             endTurnButton.SetActive(inCombat);
 
-        // Sadece Keşif -> Savaş geçişinde bir kere çalışır.
-        // (Savaş sırasında 2. düşman uyanınca oyuncunun hareketi yeniden dolmasın)
         if (inCombat && !wasInCombat)
         {
             BeginPlayerRound();
         }
 
-        // Savaştan -> Keşfe dönüş: hiç uyanık düşman kalmadı
         if (!inCombat && wasInCombat)
         {
             EndCombat();
@@ -77,12 +72,10 @@ public class TurnManager : MonoBehaviour
     {
         Debug.Log("<color=green>Savaş bitti, Keşif Moduna dönüldü.</color>");
 
-        // Savaş yazılarını ve tur sırası arayüzünü kapat
         if (enemyAlertUI != null) enemyAlertUI.SetActive(false);
         if (roundEndUI != null) roundEndUI.SetActive(false);
         if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.ClearAll();
 
-        // Çağrılan yardımcı drone'lar savaşla birlikte kapanır
         foreach (Unit player in new List<Unit>(playerUnits))
         {
             if (player == null) continue;
@@ -96,14 +89,12 @@ public class TurnManager : MonoBehaviour
         playerQueue.Clear();
         CurrentPlayerUnit = null;
 
-        // Oyuncuların hareketini/CPU'sunu doldur (UI çubukları da güncellenir, CPU barı gizlenir)
         foreach (Unit player in playerUnits)
         {
             if (player != null) player.OnTurnStart();
         }
     }
 
-    // Verilen konuma en yakın (grid mesafesine göre) yaşayan oyuncu birimini döndürür
     public Unit GetClosestPlayer(Vector3 fromWorldPos)
     {
         Unit best = null;
@@ -130,7 +121,6 @@ public class TurnManager : MonoBehaviour
         }
     }
 
-    // YENİ EKLENEN TUR BİTTİ YAZISI FONKSİYONU
     private IEnumerator ShowRoundEndRoutine()
     {
         if (roundEndUI != null && IsInCombat())
@@ -156,24 +146,19 @@ public class TurnManager : MonoBehaviour
         if (unit == CurrentPlayerUnit)
         {
             CurrentPlayerUnit = null;
-            // Sırası gelen drone yok olduysa (kendini patlattı vb.) sıra bir sonrakine geçsin
             if (unit.isPlayerOwned && !IsGameOver && IsInCombat()) StartCoroutine(AdvanceNextFrame());
         }
 
-        // Ölen birimin ikonu tur sırasından silinir
         if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.RemoveUnit(unit);
 
-        // Son uyanık düşman öldüyse savaş biter
         if (!unit.isPlayerOwned) UpdateCombatState();
         else if (CardManager.Instance != null) CardManager.Instance.RefreshUI();
     }
 
-    // Sırası gelen birime kamera gider; oyuncu tarafıysa kartları da açılır (tıklanmış gibi)
     private void FocusTurnOn(Unit u, bool selectForCards)
     {
         if (u == null) return;
 
-        // Sisli (görünmeyen) düşmana kamera gitmesin
         if (!u.isPlayerOwned && FogOfWar.Instance != null && GridManager.Instance != null &&
             !FogOfWar.Instance.IsVisible(GridManager.Instance.GetGridPosition(u.transform.position)))
             return;
@@ -193,13 +178,11 @@ public class TurnManager : MonoBehaviour
         }
         else
         {
-            // Keşif modu: herkes serbest
             foreach (Unit u in playerUnits) { if (u != null) u.OnTurnStart(); }
             if (CardManager.Instance != null) CardManager.Instance.OnPlayerTurnStart();
         }
     }
 
-    // Oyuncu tarafının turu: önce yardımcı drone'lar (çağrılma sırasıyla), en son ana drone
     private void BeginPlayerRound()
     {
         playerQueue.Clear();
@@ -215,7 +198,6 @@ public class TurnManager : MonoBehaviour
         AdvancePlayerQueue();
     }
 
-    // Sıradaki drone'a geçer; kimse kalmadıysa düşman turu başlar
     private void AdvancePlayerQueue()
     {
         while (playerQueue.Count > 0)
@@ -237,8 +219,8 @@ public class TurnManager : MonoBehaviour
 
         if (CardManager.Instance != null)
         {
-            if (u.isMainDrone) CardManager.Instance.OnPlayerTurnStart(); // tur kartları tamamlanır
-            CardManager.Instance.SetActiveUnit(u);                       // kartları bu drone'un eli açılır
+            if (u.isMainDrone) CardManager.Instance.OnPlayerTurnStart();
+            CardManager.Instance.SetActiveUnit(u);
         }
 
         if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.SetActiveUnit(u);
@@ -252,13 +234,11 @@ public class TurnManager : MonoBehaviour
             AdvancePlayerQueue();
     }
 
-    // Çağrılan yeni drone, bu turun sonunda sıraya eklenir
     public void AddToPlayerQueue(Unit u)
     {
         if (u != null && IsInCombat() && !playerQueue.Contains(u) && u != CurrentPlayerUnit) playerQueue.Add(u);
     }
 
-    // "Turu Bitir": sıradaki drone'a geçer
     public void EndPlayerTurn()
     {
         if (CurrentState != TurnState.PlayerTurn) return;
@@ -279,25 +259,23 @@ public class TurnManager : MonoBehaviour
 
     private IEnumerator EnemyTurnRoutine()
     {
-        foreach (Unit enemy in new List<Unit>(enemyUnits)) // kopya: tur sırasında biri ölürse liste bozulmasın
+        foreach (Unit enemy in new List<Unit>(enemyUnits))
         {
             if (enemy == null) continue;
 
             EnemyAI ai = enemy.GetComponent<EnemyAI>();
             if (ai != null && ai.isAwake)
             {
-                // UI'da sıradaki düşmanı aktif et (Önceki ikon silinip sola kayacak)
                 if (TurnOrderUI.Instance != null)
                     TurnOrderUI.Instance.SetActiveUnit(enemy);
 
                 FocusTurnOn(enemy, false);
-                yield return new WaitForSeconds(0.5f); // kamera düşmana gelsin
+                yield return new WaitForSeconds(0.5f);
 
                 yield return StartCoroutine(ai.TakeTurnRoutine());
             }
         }
 
-        // TÜM DÜŞMANLAR BİTTİ - TUR (ROUND) BAŞA DÖNÜYOR
         yield return StartCoroutine(ShowRoundEndRoutine());
 
         if (IsGameOver) yield break;
@@ -306,7 +284,6 @@ public class TurnManager : MonoBehaviour
         StartPlayerTurn();
     }
 
-    // Her tam tur sonunda: taunt süresi azalır, dost drone'ların şarjı azalır (0 olunca ölür)
     private void TickRoundEffects()
     {
         if (!IsInCombat()) return;
@@ -323,13 +300,12 @@ public class TurnManager : MonoBehaviour
 
     public bool IsGameOver { get; private set; }
 
-    // Ana drone yok olunca çağrılır
-    public void GameOver()
+    public void GameOver(bool showUI = true)
     {
         if (IsGameOver) return;
         IsGameOver = true;
         CurrentState = TurnState.Busy;
-        GameOverUI.Show();
+        if (showUI) GameOverUI.Show();
     }
 
     public void SetBusy()

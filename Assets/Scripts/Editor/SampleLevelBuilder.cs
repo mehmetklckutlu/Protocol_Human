@@ -7,34 +7,28 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
-// Unity üst menüsünde: Level > Ornek Level Kur
-// "örnek level" sahnesine koridorlu, dallanan bir test haritası kurar.
-// Birden fazla kez çalıştırmak güvenlidir (eski haritayı silip yeniden kurar).
 public static class SampleLevelBuilder
 {
-    // Harita hücre koordinatından dünya koordinatına kaydırma
     private const int OX = -25;
     private const int OY = -15;
 
-    // Zemin dikdörtgenleri: { x0, y0, x1, y1 } (sınırlar dahil)
     private static readonly int[][] FloorRects =
     {
-        new[] { 1, 11, 8, 18 },    // Başlangıç odası
-        new[] { 9, 13, 18, 15 },   // Batı koridoru
-        new[] { 19, 13, 21, 15 },  // Kavşak (4 yollu)
-        new[] { 19, 16, 21, 22 },  // Kuzey dal koridoru
-        new[] { 14, 23, 26, 28 },  // Kuzey oda
-        new[] { 19, 6, 21, 12 },   // Güney dal koridoru
-        new[] { 14, 1, 26, 5 },    // Güney oda
-        new[] { 22, 13, 35, 15 },  // Doğu koridoru
-        new[] { 33, 16, 35, 21 },  // Kuzeye çıkan koridor
-        new[] { 33, 7, 35, 12 },   // İkinci güney dal
-        new[] { 29, 1, 39, 6 },    // Güneydoğu oda
-        new[] { 36, 19, 40, 21 },  // Son odaya giden koridor
-        new[] { 41, 15, 48, 25 },  // Son oda
+        new[] { 1, 11, 8, 18 },
+        new[] { 9, 13, 18, 15 },
+        new[] { 19, 13, 21, 15 },
+        new[] { 19, 16, 21, 22 },
+        new[] { 14, 23, 26, 28 },
+        new[] { 19, 6, 21, 12 },
+        new[] { 14, 1, 26, 5 },
+        new[] { 22, 13, 35, 15 },
+        new[] { 33, 16, 35, 21 },
+        new[] { 33, 7, 35, 12 },
+        new[] { 29, 1, 39, 6 },
+        new[] { 36, 19, 40, 21 },
+        new[] { 41, 15, 48, 25 },
     };
 
-    // Sarı çizgili yönlendirme hattı: { x0, y0, x1, y1, yatay(1)/dikey(0) }
     private static readonly int[][] GuideSegments =
     {
         new[] { 3, 14, 34, 14, 1 },
@@ -42,38 +36,35 @@ public static class SampleLevelBuilder
         new[] { 35, 20, 44, 20, 1 },
     };
 
-    // Tile numaraları (Human Protocol Tileset-ENSON_N)
     private static readonly int[] FloorTiles = { 2, 2, 2, 2, 35, 48, 49, 0 };
-    // Duvarlar: tek tip, tutarlı şema (yön başına bir tile ailesi) + belli aralıkla havalandırma
-    private const int TopWallTile = 20;        // zemine kuzeyden bakan duvar: yatay çift boru hattı (kesintisiz devam eder)
-    private const int BottomWallTile = 43;     // zeminin altındaki duvar: sade panel
-    private static readonly int[] SideWallTiles = { 3, 24 };  // yan duvarlar: dikey raylar
+    private const int TopWallTile = 20;
+    private const int BottomWallTile = 43;
+    private static readonly int[] SideWallTiles = { 3, 24 };
     private const int CornerWallTile = 57;
-    private const int VentTile = 18;           // her 7 karede bir havalandırma
-    private static readonly Color WallTint = new Color(0.48f, 0.52f, 0.58f, 1f); // duvarları koyulaştırır
+    private const int VentTile = 18;
+    private static readonly Color WallTint = new Color(0.48f, 0.52f, 0.58f, 1f);
 
-    // Siperler (X'li kutular): { x, y, genişlik, yükseklik }
     private static readonly int[][] CoverBoxes =
     {
-        new[] { 5, 16, 2, 1 }, new[] { 6, 12, 1, 1 }, new[] { 2, 17, 1, 1 },        // başlangıç odası
-        new[] { 12, 15, 1, 1 }, new[] { 15, 13, 1, 1 },                             // batı koridoru
-        new[] { 21, 18, 1, 1 }, new[] { 19, 20, 1, 1 },                             // kuzey dal
-        new[] { 16, 25, 2, 1 }, new[] { 22, 26, 2, 2 }, new[] { 15, 27, 1, 1 },    // kuzey oda
-        new[] { 19, 9, 1, 1 }, new[] { 21, 11, 1, 1 },                              // güney dal
-        new[] { 16, 3, 2, 1 }, new[] { 22, 3, 2, 1 }, new[] { 19, 2, 1, 1 },       // güney oda
-        new[] { 26, 13, 1, 1 }, new[] { 29, 15, 1, 1 }, new[] { 32, 13, 1, 1 },    // doğu koridoru
-        new[] { 33, 18, 1, 1 }, new[] { 35, 17, 1, 1 },                             // kuzeye çıkan koridor
-        new[] { 33, 10, 1, 1 }, new[] { 35, 9, 1, 1 },                              // ikinci güney dal
-        new[] { 31, 4, 2, 1 }, new[] { 36, 2, 2, 2 }, new[] { 30, 1, 1, 1 },       // güneydoğu oda
-        new[] { 38, 19, 1, 1 }, new[] { 38, 21, 1, 1 },                             // son odaya koridor
-        new[] { 43, 17, 2, 1 }, new[] { 46, 22, 2, 2 }, new[] { 42, 24, 1, 1 }, new[] { 46, 16, 1, 1 }, // son oda
+        new[] { 5, 16, 2, 1 }, new[] { 6, 12, 1, 1 }, new[] { 2, 17, 1, 1 },
+        new[] { 12, 15, 1, 1 }, new[] { 15, 13, 1, 1 },
+        new[] { 21, 18, 1, 1 }, new[] { 19, 20, 1, 1 },
+        new[] { 16, 25, 2, 1 }, new[] { 22, 26, 2, 2 }, new[] { 15, 27, 1, 1 },
+        new[] { 19, 9, 1, 1 }, new[] { 21, 11, 1, 1 },
+        new[] { 16, 3, 2, 1 }, new[] { 22, 3, 2, 1 }, new[] { 19, 2, 1, 1 },
+        new[] { 26, 13, 1, 1 }, new[] { 29, 15, 1, 1 }, new[] { 32, 13, 1, 1 },
+        new[] { 33, 18, 1, 1 }, new[] { 35, 17, 1, 1 },
+        new[] { 33, 10, 1, 1 }, new[] { 35, 9, 1, 1 },
+        new[] { 31, 4, 2, 1 }, new[] { 36, 2, 2, 2 }, new[] { 30, 1, 1, 1 },
+        new[] { 38, 19, 1, 1 }, new[] { 38, 21, 1, 1 },
+        new[] { 43, 17, 2, 1 }, new[] { 46, 22, 2, 2 }, new[] { 42, 24, 1, 1 }, new[] { 46, 16, 1, 1 },
     };
     private static readonly int[] CoverTiles = { 14, 15, 31, 51 };
 
     private const int GuideTileA = 27;
     private const int GuideTileB = 37;
 
-    private const int ObstacleLayer = 3; // GridManager.unwalkableLayer ile aynı katman
+    private const int ObstacleLayer = 3;
 
     [MenuItem("Level/Ornek Level Kur")]
     public static void Build()
@@ -86,22 +77,18 @@ public static class SampleLevelBuilder
         Scene scene = EditorSceneManager.OpenScene(levelPath, OpenSceneMode.Single);
         SceneManager.SetActiveScene(scene);
 
-        // Oyun sistemini (Player, Enemy, yöneticiler, arayüz) CodeScene'den getir
         if (!HasRoot(scene, "TurnManager") && codePath != null)
             ImportGameplayObjects(scene, codePath);
 
-        // Tile'ları sahneler açıldıktan SONRA yükle (sahne açılırken kullanılmayan assetler bellekten atılır)
         Dictionary<int, TileBase> tiles = LoadTiles();
         if (tiles.Count < 50) { Debug.LogError("Tileset bulunamadı (" + tiles.Count + " tile)."); return; }
 
-        // Önceki kurulumu temizle
         foreach (string n in new[] { "LevelGrid", "Enemy (2)", "Enemy (3)" })
         {
             GameObject old = FindRoot(scene, n);
             if (old != null) Object.DestroyImmediate(old);
         }
 
-        // Harita
         System.Random rng = new System.Random(12345);
         HashSet<Vector2Int> floor = new HashSet<Vector2Int>();
         foreach (int[] r in FloorRects)
@@ -124,13 +111,11 @@ public static class SampleLevelBuilder
         Tilemap floorMap = CreateTilemap(gridGo.transform, "Floor", -10, false);
         Tilemap wallMap = CreateTilemap(gridGo.transform, "Walls", -5, true);
         Tilemap coverMap = CreateTilemap(gridGo.transform, "Cover", -4, true);
-        wallMap.color = WallTint; // duvarlar zeminden belirgin şekilde koyu
+        wallMap.color = WallTint;
 
-        // Zemin
         foreach (Vector2Int c in floor)
             floorMap.SetTile(ToCell(c), tiles[FloorTiles[rng.Next(FloorTiles.Length)]]);
 
-        // Sarı yönlendirme çizgisi (dikeylerde 90 derece döndürülür)
         int step = 0;
         foreach (int[] g in GuideSegments)
         {
@@ -150,7 +135,6 @@ public static class SampleLevelBuilder
             }
         }
 
-        // Duvarlar: yöne göre tutarlı tile ailesi, görsel bütünlük için rastgelelik yok
         HashSet<int> usedWallTiles = new HashSet<int>();
         foreach (Vector2Int c in walls)
         {
@@ -159,7 +143,6 @@ public static class SampleLevelBuilder
             wallMap.SetTile(ToCell(c), tiles[id]);
         }
 
-        // Siperler (üzerinde X olan kutular): yürünemez ve görüşü keser
         HashSet<Vector2Int> reserved = new HashSet<Vector2Int>();
         foreach (int[] g in GuideSegments)
         {
@@ -173,8 +156,8 @@ public static class SampleLevelBuilder
                 gx += gdx; gy += gdy;
             }
         }
-        reserved.Add(new Vector2Int(3, 14));   // oyuncu
-        reserved.Add(new Vector2Int(44, 20));  // düşmanlar
+        reserved.Add(new Vector2Int(3, 14));
+        reserved.Add(new Vector2Int(44, 20));
         reserved.Add(new Vector2Int(20, 26));
         reserved.Add(new Vector2Int(34, 3));
 
@@ -194,7 +177,6 @@ public static class SampleLevelBuilder
                     coverMap.SetTile(ToCell(c), tiles[cid]);
                 }
 
-        // Duvar tile'larına çarpışma ver (düşman görüş çizgisi ve yürünemezlik için)
         usedWallTiles.UnionWith(usedCoverTiles);
         foreach (int id in usedWallTiles)
         {
@@ -209,7 +191,6 @@ public static class SampleLevelBuilder
         wallMap.CompressBounds();
         coverMap.CompressBounds();
 
-        // Karakterler
         GameObject player = FindRoot(scene, "Player");
         GameObject enemy = FindRoot(scene, "Enemy");
         if (player != null) player.transform.position = ToWorld(3, 14);
@@ -217,11 +198,10 @@ public static class SampleLevelBuilder
         {
             enemy.transform.position = ToWorld(44, 20);
             enemy.name = "Enemy";
-            PlaceEnemyCopy(enemy, "Enemy (2)", ToWorld(20, 26), scene); // kuzey oda
-            PlaceEnemyCopy(enemy, "Enemy (3)", ToWorld(34, 3), scene);  // güneydoğu oda
+            PlaceEnemyCopy(enemy, "Enemy (2)", ToWorld(20, 26), scene);
+            PlaceEnemyCopy(enemy, "Enemy (3)", ToWorld(34, 3), scene);
         }
 
-        // GridManager: sadece zemin tile'ı olan kareler yürünebilir, duvar tile'ları yürünemez
         GridManager gm = Object.FindFirstObjectByType<GridManager>();
         if (gm != null)
         {
@@ -236,7 +216,6 @@ public static class SampleLevelBuilder
         }
         else Debug.LogWarning("Sahnede GridManager yok.");
 
-        // Kamera: oyuncuya odaklan ve haritaya sınırla
         Camera cam = Object.FindFirstObjectByType<Camera>();
         if (cam != null)
         {
@@ -262,8 +241,6 @@ public static class SampleLevelBuilder
         Debug.Log("<color=green>Ornek level kuruldu ve sahne kaydedildi.</color>");
     }
 
-    // ---------- Yardımcılar ----------
-
     private static void ImportGameplayObjects(Scene target, string codePath)
     {
         Scene code = EditorSceneManager.OpenScene(codePath, OpenSceneMode.Additive);
@@ -284,7 +261,7 @@ public static class SampleLevelBuilder
         }
 
         SceneManager.SetActiveScene(target);
-        EditorSceneManager.CloseScene(code, true); // CodeScene dosyası değişmez (kaydedilmiyor)
+        EditorSceneManager.CloseScene(code, true);
     }
 
     private static void PlaceEnemyCopy(GameObject original, string name, Vector3 pos, Scene scene)
@@ -308,7 +285,6 @@ public static class SampleLevelBuilder
         return go.GetComponent<Tilemap>();
     }
 
-    // Duvar hücresinin hangi yöne baktığına göre tutarlı tile seçer
     private static int PickWall(Vector2Int c, HashSet<Vector2Int> floor)
     {
         bool floorBelow = floor.Contains(new Vector2Int(c.x, c.y - 1));

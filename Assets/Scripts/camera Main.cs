@@ -25,7 +25,7 @@ public class TacticalCamera : MonoBehaviour
     [SerializeField] private float edgeMargin = 0f;
 
     public static TacticalCamera Instance { get; private set; }
-    private bool keepFollowing = false; // sırası gelen birimi sürekli takip et (oyuncu müdahale edene kadar)
+    private bool keepFollowing = false;
 
     private Camera cam;
     private Vector3 dragOrigin;
@@ -33,7 +33,6 @@ public class TacticalCamera : MonoBehaviour
     private bool isFocusing = false;
     private Vector3 currentVelocity = Vector3.zero;
 
-    // Boyalı her tile'ın dünya uzayındaki dikdörtgeni
     private readonly System.Collections.Generic.List<Rect> tileRects = new System.Collections.Generic.List<Rect>();
 
     private void Awake()
@@ -43,7 +42,6 @@ public class TacticalCamera : MonoBehaviour
         RecalculateBounds();
     }
 
-    // Tilemap'e sonradan tile eklenir/silinirse bunu çağır
     public void RecalculateBounds()
     {
         tileRects.Clear();
@@ -162,7 +160,6 @@ public class TacticalCamera : MonoBehaviour
         }
     }
 
-    // Kamera merkezi boyalı tile'ların dışına çıkamaz; çıkarsa en yakın tile'a geri çekilir
     private void ClampCameraPosition()
     {
         Vector3 pos = transform.position;
@@ -182,7 +179,7 @@ public class TacticalCamera : MonoBehaviour
                 {
                     bestSqr = sqr;
                     best = q;
-                    if (sqr == 0f) break; // zaten bir tile'ın üzerinde
+                    if (sqr == 0f) break;
                 }
             }
 
@@ -194,7 +191,6 @@ public class TacticalCamera : MonoBehaviour
         transform.position = pos;
     }
 
-    // Sırası gelen birime kamerayı götürür ve hareket ederken takip eder
     public void FollowUnit(Transform t)
     {
         if (t == null) return;
@@ -210,7 +206,6 @@ public class TacticalCamera : MonoBehaviour
     }
 
 #if UNITY_EDITOR
-    // Seçiliyken kameranın gezebileceği tile'ları sarı çerçeveyle gösterir
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;

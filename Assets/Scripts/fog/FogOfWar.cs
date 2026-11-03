@@ -2,11 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-// Görüş açısı + savaş sisi (fog of war).
-// - Oyuncu birimleri kendi çevrelerinde "visionRange" kare içini görür.
-// - Duvarlar ve siper kutuları (GridManager'da yürünemez olan her kare) görüşü engeller.
-// - Görüş dışı kareler siyah sisle kaplanır. İstenirse daha önce görülen yerler silik kalır.
-// - Sisteki düşmanlar gizlenir.
 public class FogOfWar : MonoBehaviour
 {
     public static FogOfWar Instance { get; private set; }
@@ -55,7 +50,6 @@ public class FogOfWar : MonoBehaviour
     }
     private readonly Dictionary<Unit, EnemyView> enemyViews = new Dictionary<Unit, EnemyView>();
 
-    // 8 oktant için dönüşüm çarpanları (recursive shadowcasting)
     private static readonly int[,] Mult =
     {
         { 1, 0, 0, -1, -1, 0, 0, 1 },
@@ -82,7 +76,6 @@ public class FogOfWar : MonoBehaviour
         PutUiAboveFog();
     }
 
-    // Ekrana sabit arayüz (kartlar, butonlar vb.) sisin altında kalmasın
     private void PutUiAboveFog()
     {
         foreach (Canvas c in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
@@ -96,8 +89,6 @@ public class FogOfWar : MonoBehaviour
         }
     }
 
-    // ---------- Dışarıdan kullanım ----------
-
     public bool IsVisible(Vector2Int cell)
     {
         if (!ready || !InGrid(cell.x, cell.y)) return !ready;
@@ -110,10 +101,8 @@ public class FogOfWar : MonoBehaviour
         return explored[cell.y * w + cell.x];
     }
 
-    // Görüşü hemen yeniden hesaplat
     public void Refresh() { forceRefresh = true; }
 
-    // Duvar/siper değişirse (ör. kutu yok edilirse) çağır
     public void RebuildBlockers()
     {
         if (gm == null) return;
@@ -125,8 +114,6 @@ public class FogOfWar : MonoBehaviour
             }
         forceRefresh = true;
     }
-
-    // ---------- Kurulum ----------
 
     private void Build()
     {
@@ -144,7 +131,6 @@ public class FogOfWar : MonoBehaviour
         for (int i = 0; i < n; i++) { cur[i] = unexploredAlpha; tgt[i] = unexploredAlpha; }
         RebuildBlockers();
 
-        // 1x1 beyaz sprite: tam bir grid karesi boyunda
         Texture2D tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
         tex.SetPixel(0, 0, Color.white);
         tex.Apply();
@@ -153,7 +139,7 @@ public class FogOfWar : MonoBehaviour
 
         Tile tile = ScriptableObject.CreateInstance<Tile>();
         tile.sprite = sprite;
-        tile.flags = TileFlags.None; // kare başına renk (şeffaflık) değiştirebilmek için
+        tile.flags = TileFlags.None;
         Color start = fogColor;
         start.a = unexploredAlpha;
         tile.color = start;
@@ -175,8 +161,6 @@ public class FogOfWar : MonoBehaviour
 
         ready = true;
     }
-
-    // ---------- Her kare ----------
 
     private void Update()
     {
@@ -294,8 +278,6 @@ public class FogOfWar : MonoBehaviour
             foreach (Canvas c in view.canvases) if (c != null) c.enabled = show;
         }
     }
-
-    // ---------- Görüş hesabı (recursive shadowcasting) ----------
 
     private bool InGrid(int x, int y) { return x >= 0 && y >= 0 && x < w && y < h; }
 

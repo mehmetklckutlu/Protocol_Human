@@ -13,7 +13,7 @@ public static class AStarPathfinding
 
         if (startNode == null || targetNode == null || !targetNode.isWalkable)
         {
-            return null; // Hedef kare veya başlangıç geçersiz
+            return null;
         }
 
         List<Node> openSet = new List<Node> { startNode };
@@ -25,7 +25,6 @@ public static class AStarPathfinding
 
         while (openSet.Count > 0)
         {
-            // OpenSet içinde F maliyeti en düşük olan nodu seç
             Node currentNode = openSet[0];
             for (int i = 1; i < openSet.Count; i++)
             {
@@ -38,7 +37,6 @@ public static class AStarPathfinding
             openSet.Remove(currentNode);
             closedSet.Add(currentNode);
 
-            // Hedefe ulaşıldıysa yolu oluştur ve dön
             if (currentNode == targetNode)
             {
                 return RetracePath(startNode, targetNode);
@@ -62,7 +60,7 @@ public static class AStarPathfinding
             }
         }
 
-        return null; // Yol bulunamadı
+        return null;
     }
 
     private static List<Node> RetracePath(Node startNode, Node endNode)
@@ -92,7 +90,6 @@ public static class AStarPathfinding
         }
         else
         {
-            // Manhattan Uzaklığı (Sadece dik hareketler için)
             return MOVE_STRAIGHT_COST * (xDistance + yDistance);
         }
     }

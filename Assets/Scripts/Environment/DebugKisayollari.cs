@@ -2,11 +2,6 @@
 using UnityEditor;
 using UnityEngine;
 
-// Sadece Unity editöründe çalışan test kısayolları (oyunun yapısında yer almaz).
-//   F1: +100 hurda ve bütün blueprint / yerden bulunan kartlar ele eklenir
-//   F2: sahnedeki tüm düşmanları uyandırır (savaşı başlatır)
-//   F3: bir düşmanı öldürür (ölünce düşenleri denemek için)
-//   F4: ana drone'u yok eder (oyun kaybı ekranını denemek için)
 public class DebugKisayollari : MonoBehaviour
 {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]

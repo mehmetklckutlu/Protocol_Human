@@ -4,9 +4,6 @@ using TMPro;
 
 public enum DroneType { Melee, Ranged, Boss }
 
-// Drone'lara eklenen ortak bileşen (Unit ile birlikte durur).
-// - Dost drone: şarj sayacı ve kendi kart seti (kit)
-// - Düşman drone: ölünce düşenler (hurda, kart, blueprint)
 [RequireComponent(typeof(Unit))]
 public class DroneUnit : MonoBehaviour
 {
@@ -47,8 +44,6 @@ public class DroneUnit : MonoBehaviour
         if (isAlly) CreateChargeLabel();
     }
 
-    // ---------- Şarj ----------
-
     public void AddCharge(int amount)
     {
         charge += amount;
@@ -56,7 +51,6 @@ public class DroneUnit : MonoBehaviour
         FloatingText.Spawn(transform.position, "+" + amount + " SARJ", new Color(0.4f, 1f, 1f));
     }
 
-    // Her tam tur sonunda TurnManager çağırır
     public void TickCharge()
     {
         if (!isAlly) return;
@@ -90,13 +84,10 @@ public class DroneUnit : MonoBehaviour
         if (chargeLabel != null) chargeLabel.text = charge.ToString();
     }
 
-    // ---------- Loot ----------
-
     private void HandleDeath(Unit u)
     {
         if (isAlly) return;
 
-        // Loot otomatik gelmez: ölen dronun yerine düşer, gidip toplanır
         int scrap = Random.Range(scrapMin, Mathf.Max(scrapMin, scrapMax) + 1);
 
         List<CardData> cards = new List<CardData>();
