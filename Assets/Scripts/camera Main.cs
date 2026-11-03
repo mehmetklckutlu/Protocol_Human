@@ -32,8 +32,23 @@ public class TacticalCamera : MonoBehaviour
     private bool isDragging = false;
     private bool isFocusing = false;
     private Vector3 currentVelocity = Vector3.zero;
+    private float shakeTimer = 0f;
+    private float shakeDuration = 0.1f;
+    private float shakeIntensity = 0f;
+    private Vector3 shakeOffset = Vector3.zero;
 
     private readonly System.Collections.Generic.List<Rect> tileRects = new System.Collections.Generic.List<Rect>();
+
+    public static void Shake(float intensity = 0.12f, float duration = 0.16f)
+    {
+        if (Instance == null) return;
+        if (intensity >= Instance.shakeIntensity || Instance.shakeTimer <= 0f)
+        {
+            Instance.shakeIntensity = intensity;
+            Instance.shakeDuration = Mathf.Max(0.01f, duration);
+            Instance.shakeTimer = Instance.shakeDuration;
+        }
+    }
 
     private void Awake()
     {
@@ -65,6 +80,12 @@ public class TacticalCamera : MonoBehaviour
 
     private void Update()
     {
+        if (shakeOffset != Vector3.zero)
+        {
+            transform.position -= shakeOffset;
+            shakeOffset = Vector3.zero;
+        }
+
         if (Input.GetKeyDown(focusKey) && targetToFocus != null)
         {
             keepFollowing = false;
@@ -84,6 +105,19 @@ public class TacticalCamera : MonoBehaviour
 
         HandleZoom();
         ClampCameraPosition();
+
+        if (shakeTimer > 0f)
+        {
+            shakeTimer -= Time.deltaTime;
+            float factor = Mathf.Clamp01(shakeTimer / shakeDuration);
+            Vector2 rnd = Random.insideUnitCircle * (shakeIntensity * factor);
+            shakeOffset = new Vector3(rnd.x, rnd.y, 0f);
+            transform.position += shakeOffset;
+        }
+        else
+        {
+            shakeIntensity = 0f;
+        }
     }
 
     private void SmoothFollowTarget()

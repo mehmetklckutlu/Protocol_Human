@@ -147,7 +147,7 @@ public class EnemyAI : MonoBehaviour
                 myUnit.PlayAttack();
                 target.TakeDamage(attackDamage);
                 hasAttackedThisTurn = true;
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.75f);
             }
             else if (distanceToTarget > attackRange)
             {

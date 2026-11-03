@@ -27,9 +27,13 @@ public class UnitWorldUI : MonoBehaviour
     [SerializeField] private Color cpuUsedColor = new Color(0.2f, 0.2f, 0.2f, 0.5f);
     private List<Image> spawnedCpuPips = new List<Image>();
 
+    private SpriteRenderer activeTurnRing;
+
     private void Awake()
     {
         targetUnit = GetComponentInParent<Unit>();
+        if (cpuContainer != null)
+            cpuContainer.gameObject.SetActive(false);
     }
 
     private void Start()
@@ -37,6 +41,7 @@ public class UnitWorldUI : MonoBehaviour
         if (targetUnit != null)
         {
             InitializePips();
+            CreateActiveTurnRing();
             targetUnit.OnStatsChanged += UpdateVisuals;
             UpdateVisuals();
         }
@@ -50,29 +55,69 @@ public class UnitWorldUI : MonoBehaviour
         }
     }
 
-    private void InitializePips()
+    private void Update()
     {
-        for (int i = 0; i < targetUnit.maxMovement; i++)
+        if (activeTurnRing == null || targetUnit == null || targetUnit.IsDead)
         {
-            GameObject pip = Instantiate(movePipPrefab, moveContainer);
-            spawnedMovePips.Add(pip.GetComponent<Image>());
+            if (activeTurnRing != null) activeTurnRing.enabled = false;
+            return;
         }
 
-        for (int i = 0; i < targetUnit.maxCPU; i++)
+        TurnManager tm = TurnManager.Instance;
+        CardManager cm = CardManager.Instance;
+        bool isActive = tm != null
+            && tm.IsInCombat()
+            && tm.CurrentState == TurnState.PlayerTurn
+            && cm != null
+            && cm.GetActiveUnit() == targetUnit;
+
+        activeTurnRing.enabled = isActive;
+        if (isActive)
         {
-            GameObject pip = Instantiate(cpuPipPrefab, cpuContainer);
-            spawnedCpuPips.Add(pip.GetComponent<Image>());
+            float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 5f);
+            float cellSize = GridManager.Instance != null ? GridManager.Instance.CellSize : 1f;
+            float scale = cellSize * Mathf.Lerp(0.85f, 1.02f, pulse);
+            activeTurnRing.transform.localScale = new Vector3(scale, scale, 1f);
+            activeTurnRing.color = new Color(0.2f, 0.95f, 1f, Mathf.Lerp(0.4f, 0.85f, pulse));
+        }
+    }
+
+    private void CreateActiveTurnRing()
+    {
+        if (!targetUnit.isPlayerOwned) return;
+        GameObject ringGo = new GameObject("ActiveTurnRing");
+        ringGo.transform.SetParent(targetUnit.transform, false);
+        ringGo.transform.localPosition = Vector3.zero;
+        activeTurnRing = ringGo.AddComponent<SpriteRenderer>();
+        activeTurnRing.sprite = RuntimeArt.Ring;
+        activeTurnRing.sortingOrder = 1;
+        activeTurnRing.enabled = false;
+    }
+
+    private void InitializePips()
+    {
+        if (moveContainer != null && movePipPrefab != null)
+        {
+            for (int i = 0; i < targetUnit.maxMovement; i++)
+            {
+                GameObject pip = Instantiate(movePipPrefab, moveContainer);
+                spawnedMovePips.Add(pip.GetComponent<Image>());
+            }
+        }
+
+        if (cpuContainer != null)
+        {
+            cpuContainer.gameObject.SetActive(false);
         }
     }
 
     private void UpdateVisuals()
     {
-        if (cpuContainer != null && TurnManager.Instance != null)
+        if (cpuContainer != null)
         {
-            cpuContainer.gameObject.SetActive(TurnManager.Instance.IsInCombat());
+            cpuContainer.gameObject.SetActive(false);
         }
 
-        if (healthFillImage != null) healthFillImage.fillAmount = (float)targetUnit.currentHealth / targetUnit.maxHealth;
         if (healthFillImage != null)
         {
             healthFillImage.fillAmount = (float)targetUnit.currentHealth / targetUnit.maxHealth;
@@ -87,11 +132,6 @@ public class UnitWorldUI : MonoBehaviour
         for (int i = 0; i < spawnedMovePips.Count; i++)
         {
             spawnedMovePips[i].color = (i < targetUnit.currentMovement) ? moveActiveColor : moveUsedColor;
-        }
-
-        for (int i = 0; i < spawnedCpuPips.Count; i++)
-        {
-            spawnedCpuPips[i].color = (i < targetUnit.currentCPU) ? cpuActiveColor : cpuUsedColor;
         }
     }
 }

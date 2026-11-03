@@ -4,6 +4,9 @@ public static class RuntimeArt
 {
     private static Sprite square;
     private static Sprite star;
+    private static Sprite ring;
+    private static Sprite cpuIcon;
+    private static Sprite scrapIcon;
 
     public static Sprite Square
     {
@@ -18,6 +21,64 @@ public static class RuntimeArt
                 square = Sprite.Create(t, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
             }
             return square;
+        }
+    }
+
+    public static Sprite Ring
+    {
+        get
+        {
+            if (ring == null)
+            {
+                const int size = 32;
+                Texture2D t = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float dist = Vector2.Distance(new Vector2(x, y), center);
+                        bool onRing = dist >= 11.5f && dist <= 14.5f;
+                        t.SetPixel(x, y, onRing ? Color.white : Color.clear);
+                    }
+                }
+                t.Apply();
+                t.filterMode = FilterMode.Point;
+                ring = Sprite.Create(t, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+            }
+            return ring;
+        }
+    }
+
+    public static Sprite CpuIcon
+    {
+        get
+        {
+            if (cpuIcon == null)
+            {
+                cpuIcon = Resources.Load<Sprite>("Icons/CPU");
+#if UNITY_EDITOR
+                if (cpuIcon == null)
+                    cpuIcon = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Prefabs/Kaynaklar/CPU.png");
+#endif
+            }
+            return cpuIcon;
+        }
+    }
+
+    public static Sprite ScrapIcon
+    {
+        get
+        {
+            if (scrapIcon == null)
+            {
+                scrapIcon = Resources.Load<Sprite>("Icons/Hurda");
+#if UNITY_EDITOR
+                if (scrapIcon == null)
+                    scrapIcon = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Prefabs/Kaynaklar/Hurda.png");
+#endif
+            }
+            return scrapIcon;
         }
     }
 

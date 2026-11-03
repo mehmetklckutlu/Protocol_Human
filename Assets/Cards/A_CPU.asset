@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardName: CPU Yenile
   cardType: 3
-  icon: {fileID: 0}
+  icon: {fileID: 8309096688390797820, guid: c9317bd7bc56a1b40ae6fb6d0ce4e765, type: 3}
   description: 
   cpuCost: 0
   scrapCost: 0

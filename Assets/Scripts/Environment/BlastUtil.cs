@@ -8,6 +8,8 @@ public static class BlastUtil
         GridManager gm = GridManager.Instance;
         if (gm == null) return;
 
+        TacticalCamera.Shake(0.28f, 0.32f);
+
         List<Vector2Int> cells = new List<Vector2Int>();
         HashSet<Vector2Int> set = new HashSet<Vector2Int>();
         for (int dx = -radius; dx <= radius; dx++)

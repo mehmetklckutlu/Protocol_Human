@@ -7,7 +7,7 @@ using UnityEngine;
 
 public static class AnimationSetup
 {
-    public const float AttackFrame = 0.08f;
+    public const float AttackFrame = 0.18f;
     public const float DieFrame = 0.1f;
     public const float ExplodeFrame = 0.07f;
     public const float ScrapFrame = 0.25f;

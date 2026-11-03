@@ -90,7 +90,6 @@ public class CardData : ScriptableObject
                     break;
             }
         }
-        if (scrapCost > 0) text += $"\nHurda: {scrapCost}";
         return text;
     }
 }

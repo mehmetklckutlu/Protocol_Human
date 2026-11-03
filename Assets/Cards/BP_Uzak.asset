@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardName: 'Blueprint: Uzak Drone'
   cardType: 2
-  icon: {fileID: 0}
+  icon: {fileID: 9018570928680034419, guid: 6c3929fe896379749a06ca3bda92a7a3, type: 3}
   description: 
   cpuCost: 3
   scrapCost: 10

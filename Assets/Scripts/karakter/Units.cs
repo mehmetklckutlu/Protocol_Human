@@ -47,10 +47,19 @@ public class Unit : MonoBehaviour
     [Tooltip("Ölüm animasyonu için en fazla beklenecek süre (saniye).")]
     [SerializeField, Min(0f)] private float maxDeathAnimTime = 2f;
 
+    private Coroutine hitFlashCoroutine;
+    private SpriteRenderer mainSpriteRenderer;
+    private Color baseSpriteColor = Color.white;
+    private Vector3 baseLocalScale = Vector3.one;
+
     private void Awake()
     {
         currentHealth = maxHealth;
         if (animator == null) animator = AnimUtil.Find(this);
+        mainSpriteRenderer = GetComponent<SpriteRenderer>();
+        if (mainSpriteRenderer == null) mainSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        if (mainSpriteRenderer != null) baseSpriteColor = mainSpriteRenderer.color;
+        baseLocalScale = transform.localScale;
     }
 
     public void PlayAttack()
@@ -110,6 +119,13 @@ public class Unit : MonoBehaviour
 
         if (damage > 0) FloatingText.Spawn(transform.position, "-" + damage, new Color(1f, 0.35f, 0.3f));
 
+        TacticalCamera.Shake(damage > 0 ? 0.13f : 0.06f, 0.16f);
+        if (gameObject.activeInHierarchy)
+        {
+            if (hitFlashCoroutine != null) StopCoroutine(hitFlashCoroutine);
+            hitFlashCoroutine = StartCoroutine(HitFlashRoutine(damage > 0));
+        }
+
         currentHealth -= damage;
         if (currentHealth <= 0)
         {
@@ -117,6 +133,29 @@ public class Unit : MonoBehaviour
             Die();
         }
         NotifyUI();
+    }
+
+    private IEnumerator HitFlashRoutine(bool healthDamage)
+    {
+        Color flashColor = healthDamage ? new Color(1f, 0.3f, 0.3f, 1f) : new Color(0.45f, 0.85f, 1f, 1f);
+        if (mainSpriteRenderer != null) mainSpriteRenderer.color = flashColor;
+        transform.localScale = baseLocalScale * 1.12f;
+
+        float elapsed = 0f;
+        const float duration = 0.16f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            if (mainSpriteRenderer != null)
+                mainSpriteRenderer.color = Color.Lerp(flashColor, baseSpriteColor, t);
+            transform.localScale = Vector3.Lerp(baseLocalScale * 1.12f, baseLocalScale, t);
+            yield return null;
+        }
+
+        if (mainSpriteRenderer != null) mainSpriteRenderer.color = baseSpriteColor;
+        transform.localScale = baseLocalScale;
+        hitFlashCoroutine = null;
     }
 
     public void UseMovement(int amount)

@@ -7,6 +7,9 @@ public class CardHandUI : MonoBehaviour
     [SerializeField] private Transform container;
     [SerializeField] private CardView cardPrefab;
 
+    private int lastCount = -1;
+    private bool wasInCombat = false;
+
     private void Start()
     {
         if (CardManager.Instance != null)
@@ -29,14 +32,28 @@ public class CardHandUI : MonoBehaviour
 
         bool inCombat = TurnManager.Instance != null && TurnManager.Instance.IsInCombat();
         if (handRoot != null) handRoot.SetActive(inCombat);
-        if (!inCombat) return;
+        if (!inCombat)
+        {
+            wasInCombat = false;
+            lastCount = -1;
+            return;
+        }
 
         foreach (Transform child in container) Destroy(child.gameObject);
 
+        List<CardData> validCards = new List<CardData>();
         foreach (CardData card in cm.CurrentHand)
+            if (card != null) validCards.Add(card);
+
+        bool playIntro = !wasInCombat || validCards.Count > lastCount;
+        wasInCombat = true;
+        lastCount = validCards.Count;
+
+        for (int i = 0; i < validCards.Count; i++)
         {
-            if (card == null) continue;
+            CardData card = validCards[i];
             CardView view = Instantiate(cardPrefab, container);
+            view.SetHandSlot(i, validCards.Count, playIntro);
             view.Setup(card, cm.CanPlay(card), cm.PendingCard == card);
         }
     }

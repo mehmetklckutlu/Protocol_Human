@@ -23,6 +23,11 @@ public class ScrapUI : MonoBehaviour
     private GameObject progressBar;
     private TMP_Text resultText;
     private TMP_Text counterText;
+    private Image counterIcon;
+    private GameObject cpuBox;
+    private TMP_Text cpuText;
+    private Image cpuIcon;
+    private int lastShownCpu = int.MinValue;
     private bool busy;
     private float resultHideTime;
 
@@ -41,6 +46,8 @@ public class ScrapUI : MonoBehaviour
     {
         if (resultText != null && resultText.gameObject.activeSelf && Time.time > resultHideTime && !busy)
             resultText.gameObject.SetActive(false);
+
+        UpdateCpuDisplay();
     }
 
     public void BeginSearch()
@@ -81,12 +88,67 @@ public class ScrapUI : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        counterText = MakeText(canvasGo.transform, "Counter", 34, TextAlignmentOptions.Left);
+        GameObject counterBox = new GameObject("ScrapCounterBox", typeof(RectTransform), typeof(Image));
+        counterBox.transform.SetParent(canvasGo.transform, false);
+        RectTransform cbr = counterBox.GetComponent<RectTransform>();
+        cbr.anchorMin = cbr.anchorMax = new Vector2(0f, 1f);
+        cbr.pivot = new Vector2(0f, 1f);
+        cbr.anchoredPosition = new Vector2(24f, -20f);
+        cbr.sizeDelta = new Vector2(240f, 58f);
+        Image cbImg = counterBox.GetComponent<Image>();
+        cbImg.color = new Color(0.06f, 0.09f, 0.13f, 0.88f);
+        cbImg.raycastTarget = false;
+
+        GameObject iconGo = new GameObject("ScrapIcon", typeof(RectTransform), typeof(Image));
+        iconGo.transform.SetParent(counterBox.transform, false);
+        RectTransform ir = iconGo.GetComponent<RectTransform>();
+        ir.anchorMin = ir.anchorMax = new Vector2(0f, 0.5f);
+        ir.pivot = new Vector2(0f, 0.5f);
+        ir.anchoredPosition = new Vector2(10f, 0f);
+        ir.sizeDelta = new Vector2(44f, 44f);
+        counterIcon = iconGo.GetComponent<Image>();
+        counterIcon.sprite = RuntimeArt.ScrapIcon;
+        counterIcon.preserveAspect = true;
+        counterIcon.raycastTarget = false;
+
+        counterText = MakeText(counterBox.transform, "Counter", 32, TextAlignmentOptions.Left);
         RectTransform cr = counterText.rectTransform;
-        cr.anchorMin = cr.anchorMax = new Vector2(0f, 1f);
-        cr.pivot = new Vector2(0f, 1f);
-        cr.anchoredPosition = new Vector2(30f, -25f);
-        cr.sizeDelta = new Vector2(400f, 50f);
+        cr.anchorMin = new Vector2(0f, 0f);
+        cr.anchorMax = new Vector2(1f, 1f);
+        cr.offsetMin = new Vector2(62f, 0f);
+        cr.offsetMax = new Vector2(-10f, 0f);
+
+        cpuBox = new GameObject("CpuCounterBox", typeof(RectTransform), typeof(Image));
+        cpuBox.transform.SetParent(canvasGo.transform, false);
+        RectTransform cpbr = cpuBox.GetComponent<RectTransform>();
+        cpbr.anchorMin = cpbr.anchorMax = new Vector2(0f, 0f);
+        cpbr.pivot = new Vector2(0f, 0f);
+        cpbr.anchoredPosition = new Vector2(24f, 24f);
+        cpbr.sizeDelta = new Vector2(220f, 58f);
+        Image cpbImg = cpuBox.GetComponent<Image>();
+        cpbImg.color = new Color(0.05f, 0.11f, 0.16f, 0.90f);
+        cpbImg.raycastTarget = false;
+
+        GameObject cpuIconGo = new GameObject("CpuIcon", typeof(RectTransform), typeof(Image));
+        cpuIconGo.transform.SetParent(cpuBox.transform, false);
+        RectTransform cir = cpuIconGo.GetComponent<RectTransform>();
+        cir.anchorMin = cir.anchorMax = new Vector2(0f, 0.5f);
+        cir.pivot = new Vector2(0f, 0.5f);
+        cir.anchoredPosition = new Vector2(10f, 0f);
+        cir.sizeDelta = new Vector2(44f, 44f);
+        cpuIcon = cpuIconGo.GetComponent<Image>();
+        cpuIcon.sprite = RuntimeArt.CpuIcon;
+        cpuIcon.preserveAspect = true;
+        cpuIcon.raycastTarget = false;
+
+        cpuText = MakeText(cpuBox.transform, "CpuCounter", 32, TextAlignmentOptions.Left);
+        cpuText.color = new Color(0.55f, 0.98f, 1f);
+        RectTransform cptr = cpuText.rectTransform;
+        cptr.anchorMin = new Vector2(0f, 0f);
+        cptr.anchorMax = new Vector2(1f, 1f);
+        cptr.offsetMin = new Vector2(62f, 0f);
+        cptr.offsetMax = new Vector2(-10f, 0f);
+        cpuBox.SetActive(false);
 
         panel = new GameObject("SearchPanel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(canvasGo.transform, false);
@@ -151,5 +213,41 @@ public class ScrapUI : MonoBehaviour
     private void UpdateCounter()
     {
         if (counterText != null) counterText.text = "Hurda: " + ScrapInventory.Count;
+    }
+
+    private void UpdateCpuDisplay()
+    {
+        if (cpuBox == null) return;
+
+        TurnManager tm = TurnManager.Instance;
+        bool inCombat = tm != null && tm.IsInCombat();
+        if (cpuBox.activeSelf != inCombat)
+        {
+            cpuBox.SetActive(inCombat);
+            lastShownCpu = int.MinValue;
+        }
+
+        if (!inCombat) return;
+
+        Unit cpuUnit = FindPlayerCpuUnit(tm);
+        int currentCpu = cpuUnit != null ? cpuUnit.currentCPU : 0;
+        if (currentCpu != lastShownCpu && cpuText != null)
+        {
+            lastShownCpu = currentCpu;
+            cpuText.text = "Cpu: " + currentCpu;
+        }
+    }
+
+    private static Unit FindPlayerCpuUnit(TurnManager tm)
+    {
+        if (tm == null) return null;
+        Unit fallback = null;
+        foreach (Unit u in tm.playerUnits)
+        {
+            if (u == null) continue;
+            if (u.isMainDrone) return u;
+            if (fallback == null && u.usesCpu) fallback = u;
+        }
+        return fallback;
     }
 }

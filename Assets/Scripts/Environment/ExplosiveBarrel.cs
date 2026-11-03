@@ -103,6 +103,8 @@ public class ExplosiveBarrel : MonoBehaviour
         All.Remove(this);
         HidePreview();
 
+        TacticalCamera.Shake(0.28f, 0.32f);
+
         List<Vector2Int> cells = GetBlastCells();
         HashSet<Vector2Int> set = new HashSet<Vector2Int>(cells);
 
