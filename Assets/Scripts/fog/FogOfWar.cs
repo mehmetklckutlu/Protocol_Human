@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 public class FogOfWar : MonoBehaviour
 {
@@ -13,6 +12,9 @@ public class FogOfWar : MonoBehaviour
     [SerializeField] private bool rememberExplored = true;
     [Tooltip("Açık: görüş dışındaki düşmanlar gizlenir.")]
     [SerializeField] private bool hideEnemiesInFog = true;
+    [Tooltip("Görülen bir duvar karesinin arkasındaki kaç sıra duvar da açılsın. " +
+             "Duvarlar 2 kare kalın olduğu için 1 = duvarın iki sırası da (kablolar + borular) görünür.")]
+    [SerializeField, Range(0, 3)] private int wallRevealDepth = 1;
 
     [Header("Görünüm")]
     [Tooltip("Hiç görülmemiş karelerin sis koyuluğu (1 = tam siyah).")]
@@ -25,6 +27,12 @@ public class FogOfWar : MonoBehaviour
     [Tooltip("Sis, bu sıralamadan düşük her şeyin üstünü kaplar.")]
     [SerializeField] private int sortingOrder = 100;
 
+    [Header("Yumuşaklık")]
+    [Tooltip("Bir grid karesinin sis dokusunda kaç parçaya bölüneceği (kenar başına). 4 = kare başına 4x4 = 16 sis pikseli.")]
+    [SerializeField, Range(1, 8)] private int subdivisions = 4;
+    [Tooltip("Kareler arası geçişi yumuşatır (smoothstep). Kapalıysa düz doğrusal geçiş olur.")]
+    [SerializeField] private bool smoothEdges = true;
+
     private GridManager gm;
     private int w, h;
     private bool[] blocked;
@@ -35,8 +43,15 @@ public class FogOfWar : MonoBehaviour
     private float[] tgt;
     private bool[] inAnim;
     private readonly List<int> animating = new List<int>();
+    private readonly List<int> wallReveal = new List<int>();
 
-    private Tilemap fogMap;
+    private Texture2D fogTex;
+    private Color32[] pixels;
+    private int texW, texH;
+    private byte fogR, fogG, fogB;
+    private bool texDirty = false;
+    private int dirtyMinX, dirtyMinY, dirtyMaxX, dirtyMaxY;
+
     private bool ready = false;
     private bool forceRefresh = true;
     private readonly List<Vector2Int> lastPositions = new List<Vector2Int>();
@@ -74,6 +89,11 @@ public class FogOfWar : MonoBehaviour
         }
         Build();
         PutUiAboveFog();
+    }
+
+    private void OnDestroy()
+    {
+        if (fogTex != null) Destroy(fogTex);
     }
 
     private void PutUiAboveFog()
@@ -131,33 +151,30 @@ public class FogOfWar : MonoBehaviour
         for (int i = 0; i < n; i++) { cur[i] = unexploredAlpha; tgt[i] = unexploredAlpha; }
         RebuildBlockers();
 
-        Texture2D tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-        tex.SetPixel(0, 0, Color.white);
-        tex.Apply();
-        tex.filterMode = FilterMode.Point;
-        Sprite sprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f / gm.CellSize);
+        Color32 fc = fogColor;
+        fogR = fc.r; fogG = fc.g; fogB = fc.b;
 
-        Tile tile = ScriptableObject.CreateInstance<Tile>();
-        tile.sprite = sprite;
-        tile.flags = TileFlags.None;
-        Color start = fogColor;
-        start.a = unexploredAlpha;
-        tile.color = start;
+        int s = Mathf.Max(1, subdivisions);
+        texW = w * s;
+        texH = h * s;
+        fogTex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
+        fogTex.name = "FogOfWarTexture";
+        fogTex.filterMode = FilterMode.Bilinear;
+        fogTex.wrapMode = TextureWrapMode.Clamp;
+        pixels = new Color32[texW * texH];
 
-        GameObject go = new GameObject("FogOfWarGrid", typeof(Grid));
+        MarkDirty(0, 0, w - 1, h - 1);
+        RebuildPixels();
+
+        Sprite sprite = Sprite.Create(fogTex, new Rect(0, 0, texW, texH), Vector2.zero, s / gm.CellSize,
+                                      0, SpriteMeshType.FullRect);
+
+        GameObject go = new GameObject("FogOfWarSprite", typeof(SpriteRenderer));
         go.transform.SetParent(transform, false);
         go.transform.position = gm.GridOrigin;
-        Grid grid = go.GetComponent<Grid>();
-        grid.cellSize = new Vector3(gm.CellSize, gm.CellSize, 0f);
-
-        GameObject mapGo = new GameObject("Fog", typeof(Tilemap), typeof(TilemapRenderer));
-        mapGo.transform.SetParent(go.transform, false);
-        fogMap = mapGo.GetComponent<Tilemap>();
-        mapGo.GetComponent<TilemapRenderer>().sortingOrder = sortingOrder;
-
-        TileBase[] tiles = new TileBase[n];
-        for (int i = 0; i < n; i++) tiles[i] = tile;
-        fogMap.SetTilesBlock(new BoundsInt(0, 0, 0, w, h, 1), tiles);
+        SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.sortingOrder = sortingOrder;
 
         ready = true;
     }
@@ -176,6 +193,7 @@ public class FogOfWar : MonoBehaviour
         }
 
         Animate();
+        if (texDirty) RebuildPixels();
         if (hideEnemiesInFog) UpdateEnemies();
     }
 
@@ -210,6 +228,8 @@ public class FogOfWar : MonoBehaviour
                           Mult[0, oct], Mult[1, oct], Mult[2, oct], Mult[3, oct]);
         }
 
+        RevealWallBacks();
+
         bool[] old = visible;
         visible = scratch;
         scratch = old;
@@ -229,6 +249,33 @@ public class FogOfWar : MonoBehaviour
         }
     }
 
+    // Görülen duvar karesine komşu olan duvar kareleri de açılır.
+    // Böylece 2 kare kalınlığındaki duvarın arka sırası (borular) da görünür.
+    private void RevealWallBacks()
+    {
+        for (int pass = 0; pass < wallRevealDepth; pass++)
+        {
+            wallReveal.Clear();
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x;
+                    if (!scratch[i] || !blocked[i]) continue;
+
+                    for (int dy = -1; dy <= 1; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            int nx = x + dx, ny = y + dy;
+                            if (!InGrid(nx, ny)) continue;
+                            int j = ny * w + nx;
+                            if (blocked[j] && !scratch[j]) wallReveal.Add(j);
+                        }
+                }
+            if (wallReveal.Count == 0) break;
+            foreach (int j in wallReveal) scratch[j] = true;
+        }
+    }
+
     private void Animate()
     {
         for (int k = animating.Count - 1; k >= 0; k--)
@@ -237,9 +284,8 @@ public class FogOfWar : MonoBehaviour
             float c = Mathf.MoveTowards(cur[i], tgt[i], fadeSpeed * Time.deltaTime);
             cur[i] = c;
 
-            Color col = fogColor;
-            col.a = c;
-            fogMap.SetColor(new Vector3Int(i % w, i / w, 0), col);
+            int x = i % w, y = i / w;
+            MarkDirty(x - 1, y - 1, x + 1, y + 1);
 
             if (Mathf.Approximately(c, tgt[i]))
             {
@@ -247,6 +293,66 @@ public class FogOfWar : MonoBehaviour
                 inAnim[i] = false;
             }
         }
+    }
+
+    private void MarkDirty(int minX, int minY, int maxX, int maxY)
+    {
+        minX = Mathf.Max(0, minX); minY = Mathf.Max(0, minY);
+        maxX = Mathf.Min(w - 1, maxX); maxY = Mathf.Min(h - 1, maxY);
+        if (!texDirty)
+        {
+            dirtyMinX = minX; dirtyMinY = minY; dirtyMaxX = maxX; dirtyMaxY = maxY;
+            texDirty = true;
+            return;
+        }
+        if (minX < dirtyMinX) dirtyMinX = minX;
+        if (minY < dirtyMinY) dirtyMinY = minY;
+        if (maxX > dirtyMaxX) dirtyMaxX = maxX;
+        if (maxY > dirtyMaxY) dirtyMaxY = maxY;
+    }
+
+    private float CellAlpha(int x, int y)
+    {
+        if (x < 0) x = 0; else if (x >= w) x = w - 1;
+        if (y < 0) y = 0; else if (y >= h) y = h - 1;
+        return cur[y * w + x];
+    }
+
+    // Sis dokusunu, kare merkezleri arasında çift doğrusal (bilinear) ara değerlemeyle doldurur.
+    // Her kare subdivisions x subdivisions piksele bölündüğü için geçişler kare kare değil, yumuşak olur.
+    private void RebuildPixels()
+    {
+        int s = Mathf.Max(1, subdivisions);
+        int px0 = dirtyMinX * s, py0 = dirtyMinY * s;
+        int px1 = (dirtyMaxX + 1) * s, py1 = (dirtyMaxY + 1) * s;
+        float inv = 1f / s;
+
+        for (int py = py0; py < py1; py++)
+        {
+            float v = (py + 0.5f) * inv - 0.5f;
+            int cy = Mathf.FloorToInt(v);
+            float fy = v - cy;
+            if (smoothEdges) fy = fy * fy * (3f - 2f * fy);
+
+            int row = py * texW;
+            for (int px = px0; px < px1; px++)
+            {
+                float u = (px + 0.5f) * inv - 0.5f;
+                int cx = Mathf.FloorToInt(u);
+                float fx = u - cx;
+                if (smoothEdges) fx = fx * fx * (3f - 2f * fx);
+
+                float a00 = CellAlpha(cx, cy), a10 = CellAlpha(cx + 1, cy);
+                float a01 = CellAlpha(cx, cy + 1), a11 = CellAlpha(cx + 1, cy + 1);
+                float a = Mathf.Lerp(Mathf.Lerp(a00, a10, fx), Mathf.Lerp(a01, a11, fx), fy);
+
+                pixels[row + px] = new Color32(fogR, fogG, fogB, (byte)(Mathf.Clamp01(a) * 255f + 0.5f));
+            }
+        }
+
+        fogTex.SetPixels32(pixels);
+        fogTex.Apply(false);
+        texDirty = false;
     }
 
     private void UpdateEnemies()
