@@ -74,6 +74,12 @@ public class ExplosiveBarrel : MonoBehaviour
 
     public void ShowPreview()
     {
+        if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(Cell))
+        {
+            HidePreview();
+            return;
+        }
+
         List<Vector2Int> cells = GetBlastCells();
         while (previewTiles.Count < cells.Count)
             previewTiles.Add(RuntimeArt.MakeSquare(null, "BlastPreview", previewColor, gm.CellSize * 0.95f, 6, Vector3.zero));

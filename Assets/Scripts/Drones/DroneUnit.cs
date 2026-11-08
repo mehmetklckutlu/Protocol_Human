@@ -36,6 +36,12 @@ public class DroneUnit : MonoBehaviour
     private void Awake()
     {
         unit = GetComponent<Unit>();
+        Animator[] anims = GetComponents<Animator>();
+        if (anims != null && anims.Length > 1)
+        {
+            for (int i = 1; i < anims.Length; i++)
+                Destroy(anims[i]);
+        }
     }
 
     private void Start()

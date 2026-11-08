@@ -9,7 +9,7 @@ public class playButton : MonoBehaviour
     [Header("Buton")]
     public MenuButtonType buttonType = MenuButtonType.Oyna;
     [Tooltip("Oyna butonu bu sahneyi açar. Bulunamazsa Build Settings'teki 1 numaralı sahne açılır.")]
-    public string sceneToLoad = "örnek level";
+    public string sceneToLoad = "Buyuk Level";
 
     [Header("Fare Üstündeyken")]
     [SerializeField] private float hoverScale = 1.08f;

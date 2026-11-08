@@ -253,7 +253,6 @@ public class TurnManager : MonoBehaviour
     {
         CurrentState = TurnState.EnemyTurn;
         if (CardManager.Instance != null) CardManager.Instance.CancelTargeting();
-        foreach (Unit u in enemyUnits) { if (u != null) u.OnTurnStart(); }
         StartCoroutine(EnemyTurnRoutine());
     }
 
@@ -266,6 +265,8 @@ public class TurnManager : MonoBehaviour
             EnemyAI ai = enemy.GetComponent<EnemyAI>();
             if (ai != null && ai.isAwake)
             {
+                enemy.OnTurnStart();
+
                 if (TurnOrderUI.Instance != null)
                     TurnOrderUI.Instance.SetActiveUnit(enemy);
 

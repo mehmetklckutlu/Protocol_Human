@@ -44,11 +44,13 @@ public class EnemyAI : MonoBehaviour
 
         if (TurnManager.Instance == null || GridManager.Instance == null) return;
 
+        Vector2Int currentPos = GridManager.Instance.GetGridPosition(transform.position);
+        if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(currentPos)) return;
+
         foreach (Unit target in TurnManager.Instance.playerUnits)
         {
             if (target == null) continue;
 
-            Vector2Int currentPos = GridManager.Instance.GetGridPosition(transform.position);
             Vector2Int targetPos = GridManager.Instance.GetGridPosition(target.transform.position);
             int distanceToTarget = Mathf.Abs(currentPos.x - targetPos.x) + Mathf.Abs(currentPos.y - targetPos.y);
 

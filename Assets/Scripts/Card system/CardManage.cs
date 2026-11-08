@@ -313,7 +313,7 @@ public class CardManager : MonoBehaviour
         ClearBarrelPreview();
         HighlightManager.Instance.ClearHighlights();
 
-        attacker.PlayAttack();
+        attacker.PlayAttack(card != null && card.range > 1);
 
         if (RollHit(card, target.transform.position))
         {
@@ -338,7 +338,7 @@ public class CardManager : MonoBehaviour
         ClearBarrelPreview();
         HighlightManager.Instance.ClearHighlights();
 
-        attacker.PlayAttack();
+        attacker.PlayAttack(card != null && card.range > 1);
         if (RollHit(card, barrel.transform.position)) barrel.Explode();
         NotifyHandChanged();
     }

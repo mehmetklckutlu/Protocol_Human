@@ -4,6 +4,8 @@ using UnityEngine;
 public static class AnimUtil
 {
     public const string Attack = "Attack";
+    public const string MeleeAttack = "MeleeAttack";
+    public const string RangedAttack = "RangedAttack";
     public const string Die = "Die";
     public const string Explode = "Explode";
     public const string Search = "Search";

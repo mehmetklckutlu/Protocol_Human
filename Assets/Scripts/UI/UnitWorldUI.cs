@@ -16,8 +16,8 @@ public class UnitWorldUI : MonoBehaviour
     [Header("Hareket Göstergesi")]
     [SerializeField] private GameObject movePipPrefab;
     [SerializeField] private Transform moveContainer;
-    [SerializeField] private Color moveActiveColor = Color.green;
-    [SerializeField] private Color moveUsedColor = new Color(0.2f, 0.2f, 0.2f, 0.5f);
+    [SerializeField] private Color moveActiveColor = new Color(0.98f, 0.68f, 0.12f, 1f);
+    [SerializeField] private Color moveUsedColor = new Color(0.16f, 0.13f, 0.08f, 0.85f);
     private List<Image> spawnedMovePips = new List<Image>();
 
     [Header("CPU Göstergesi")]
@@ -28,6 +28,8 @@ public class UnitWorldUI : MonoBehaviour
     private List<Image> spawnedCpuPips = new List<Image>();
 
     private SpriteRenderer activeTurnRing;
+    private Image hpBgImage;
+    private GameObject shieldBadgeObject;
 
     private void Awake()
     {
@@ -40,6 +42,8 @@ public class UnitWorldUI : MonoBehaviour
     {
         if (targetUnit != null)
         {
+            ApplyHealthBarStyle();
+            EnsureShieldBadge();
             InitializePips();
             CreateActiveTurnRing();
             targetUnit.OnStatsChanged += UpdateVisuals;
@@ -82,6 +86,100 @@ public class UnitWorldUI : MonoBehaviour
         }
     }
 
+    private void ApplyHealthBarStyle()
+    {
+        if (healthFillImage == null || targetUnit == null) return;
+
+        bool isAlly = targetUnit.isPlayerOwned;
+        Transform bgTransform = healthFillImage.transform.parent;
+        if (bgTransform != null)
+        {
+            RectTransform bgRect = bgTransform as RectTransform;
+            if (bgRect != null)
+            {
+                bgRect.localScale = Vector3.one;
+                bgRect.anchoredPosition = new Vector2(100f, 21f);
+                bgRect.sizeDelta = new Vector2(104f, 18f);
+            }
+
+            hpBgImage = bgTransform.GetComponent<Image>();
+            if (hpBgImage != null)
+            {
+                hpBgImage.sprite = isAlly ? RuntimeArt.AllyHpFrame : RuntimeArt.EnemyHpFrame;
+                hpBgImage.type = Image.Type.Simple;
+                hpBgImage.color = Color.white;
+                hpBgImage.raycastTarget = false;
+            }
+        }
+
+        RectTransform fillRect = healthFillImage.rectTransform;
+        if (fillRect != null)
+        {
+            fillRect.localScale = Vector3.one;
+            fillRect.anchorMin = new Vector2(0f, 0f);
+            fillRect.anchorMax = new Vector2(1f, 1f);
+            fillRect.pivot = new Vector2(0.5f, 0.5f);
+            fillRect.offsetMin = new Vector2(isAlly ? 4f : 5f, 3f);
+            fillRect.offsetMax = new Vector2(isAlly ? -4f : -5f, -3f);
+        }
+
+        healthFillImage.sprite = isAlly ? RuntimeArt.AllyHpFill : RuntimeArt.EnemyHpFill;
+        healthFillImage.color = Color.white;
+        healthFillImage.type = Image.Type.Filled;
+        healthFillImage.fillMethod = Image.FillMethod.Horizontal;
+        healthFillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+        healthFillImage.raycastTarget = false;
+    }
+
+    private void EnsureShieldBadge()
+    {
+        if (healthFillImage == null || shieldBadgeObject != null) return;
+
+        Transform bgTransform = healthFillImage.transform.parent;
+        if (bgTransform == null) return;
+
+        shieldBadgeObject = new GameObject("ShieldBadge", typeof(RectTransform), typeof(Image));
+        shieldBadgeObject.transform.SetParent(bgTransform, false);
+
+        RectTransform badgeRect = shieldBadgeObject.GetComponent<RectTransform>();
+        badgeRect.anchorMin = new Vector2(1f, 0.5f);
+        badgeRect.anchorMax = new Vector2(1f, 0.5f);
+        badgeRect.pivot = new Vector2(0.5f, 0.5f);
+        badgeRect.anchoredPosition = new Vector2(16f, 0f);
+        badgeRect.sizeDelta = new Vector2(26f, 29f);
+        badgeRect.localScale = Vector3.one;
+
+        Image badgeImg = shieldBadgeObject.GetComponent<Image>();
+        badgeImg.sprite = RuntimeArt.ShieldIcon;
+        badgeImg.type = Image.Type.Simple;
+        badgeImg.color = Color.white;
+        badgeImg.raycastTarget = false;
+
+        GameObject textGo = new GameObject("ShieldValueText", typeof(RectTransform), typeof(TextMeshProUGUI));
+        textGo.transform.SetParent(shieldBadgeObject.transform, false);
+
+        RectTransform textRect = textGo.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(-4f, -2f);
+        textRect.offsetMax = new Vector2(4f, 2f);
+        textRect.localScale = Vector3.one;
+
+        TextMeshProUGUI tmp = textGo.GetComponent<TextMeshProUGUI>();
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontSize = 13f;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.color = Color.white;
+        tmp.outlineWidth = 0.25f;
+        tmp.outlineColor = new Color32(5, 18, 36, 255);
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.raycastTarget = false;
+
+        shieldText = tmp;
+        shieldBadgeObject.SetActive(false);
+    }
+
     private void CreateActiveTurnRing()
     {
         if (!targetUnit.isPlayerOwned) return;
@@ -98,10 +196,37 @@ public class UnitWorldUI : MonoBehaviour
     {
         if (moveContainer != null && movePipPrefab != null)
         {
+            RectTransform moveRect = moveContainer as RectTransform;
+            if (moveRect != null)
+            {
+                moveRect.localScale = Vector3.one;
+                moveRect.anchoredPosition = new Vector2(100f, 7f);
+                moveRect.sizeDelta = new Vector2(98f, 9f);
+            }
+
+            HorizontalLayoutGroup hlg = moveContainer.GetComponent<HorizontalLayoutGroup>();
+            if (hlg != null)
+            {
+                hlg.spacing = 3f;
+                hlg.childAlignment = TextAnchor.MiddleCenter;
+                hlg.childControlWidth = true;
+                hlg.childControlHeight = true;
+                hlg.childForceExpandWidth = true;
+                hlg.childForceExpandHeight = true;
+            }
+
             for (int i = 0; i < targetUnit.maxMovement; i++)
             {
                 GameObject pip = Instantiate(movePipPrefab, moveContainer);
-                spawnedMovePips.Add(pip.GetComponent<Image>());
+                Image pipImg = pip.GetComponent<Image>();
+                if (pipImg != null)
+                {
+                    pipImg.sprite = RuntimeArt.StaminaPipActive;
+                    pipImg.type = Image.Type.Simple;
+                    pipImg.color = Color.white;
+                    pipImg.raycastTarget = false;
+                    spawnedMovePips.Add(pipImg);
+                }
             }
         }
 
@@ -123,15 +248,32 @@ public class UnitWorldUI : MonoBehaviour
             healthFillImage.fillAmount = (float)targetUnit.currentHealth / targetUnit.maxHealth;
         }
 
+        bool hasShield = targetUnit.currentShield > 0;
+        if (hpBgImage != null)
+        {
+            if (hasShield)
+                hpBgImage.sprite = RuntimeArt.ShieldedHpFrame;
+            else
+                hpBgImage.sprite = targetUnit.isPlayerOwned ? RuntimeArt.AllyHpFrame : RuntimeArt.EnemyHpFrame;
+        }
+
+        if (shieldBadgeObject != null)
+        {
+            shieldBadgeObject.SetActive(hasShield);
+        }
+
         if (shieldText != null)
         {
-            shieldText.gameObject.SetActive(targetUnit.currentShield > 0);
-            shieldText.text = targetUnit.currentShield.ToString();
+            shieldText.gameObject.SetActive(hasShield);
+            if (hasShield) shieldText.text = targetUnit.currentShield.ToString();
         }
 
         for (int i = 0; i < spawnedMovePips.Count; i++)
         {
-            spawnedMovePips[i].color = (i < targetUnit.currentMovement) ? moveActiveColor : moveUsedColor;
+            if (spawnedMovePips[i] == null) continue;
+            bool active = i < targetUnit.currentMovement;
+            spawnedMovePips[i].sprite = active ? RuntimeArt.StaminaPipActive : RuntimeArt.StaminaPipEmpty;
+            spawnedMovePips[i].color = Color.white;
         }
     }
 }

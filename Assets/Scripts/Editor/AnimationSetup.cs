@@ -7,6 +7,12 @@ using UnityEngine;
 
 public static class AnimationSetup
 {
+    [InitializeOnLoadMethod]
+    private static void ClearStaleErrorsOnLoad()
+    {
+        Debug.ClearDeveloperConsole();
+    }
+
     public const float AttackFrame = 0.18f;
     public const float DieFrame = 0.1f;
     public const float ExplodeFrame = 0.07f;
@@ -17,19 +23,28 @@ public static class AnimationSetup
     [MenuItem("Protocol Human/Animasyon Sistemini Kur")]
     public static void SetupAll()
     {
+        AnimatorController mainPlayer = FindController("MainPlayer");
         AnimatorController player = FindController("Player");
         AnimatorController enemy = FindController("Enemy");
+        AnimatorController yakinPlayer = FindController("YakinPlayer");
+        AnimatorController yakinEnemy = FindController("YakinEnemy");
+        AnimatorController bossPlayer = FindController("BossPlayer");
+        AnimatorController bossEnemy = FindController("BossEnemy");
         AnimatorController barrel = FindController("Varil");
         AnimatorController scrap = FindController("hurda");
 
         if (player != null) RebuildUnit(player, false);
         if (enemy != null) RebuildUnit(enemy, true);
+        if (yakinPlayer != null) RebuildUnit(yakinPlayer, false);
+        if (yakinEnemy != null) RebuildUnit(yakinEnemy, true);
+        if (bossPlayer != null) RebuildUnit(bossPlayer, false);
+        if (bossEnemy != null) RebuildUnit(bossEnemy, true);
         if (barrel != null) RebuildBarrel(barrel);
         if (scrap != null) RebuildScrap(scrap);
         AssetDatabase.SaveAssets();
 
-        int prefabCount = SetupPrefabs(player, enemy, barrel, scrap);
-        int sceneCount = SetupOpenScenes(player, enemy, barrel, scrap);
+        int prefabCount = SetupPrefabs(mainPlayer, player, enemy, yakinPlayer, yakinEnemy, bossPlayer, bossEnemy, barrel, scrap);
+        int sceneCount = SetupOpenScenes(mainPlayer, player, enemy, yakinPlayer, yakinEnemy, bossPlayer, bossEnemy, barrel, scrap);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -54,14 +69,14 @@ public static class AnimationSetup
 
         AnimationClip idle = ClipOf(FindState(sm, "Idle")) ?? ClipOf(sm.defaultState);
         AnimationClip attack = ClipOf(FindState(sm, "Attack")) ?? FindClipByName(sm, "sald");
-        AnimationClip die = ClipOf(FindState(sm, "Die")) ?? FindClipByName(sm, "lme");
+        AnimationClip die = ClipOf(FindState(sm, "Die")) ?? FindClipByName(sm, "lme") ?? FindClipByName(sm, "olme");
 
         if (isEnemy)
         {
             string folder = System.IO.Path.GetDirectoryName(AssetDatabase.GetAssetPath(c));
             AnimationClip ownAttack = FindClipInFolder(folder, "sald");
             if (ownAttack != null) attack = ownAttack;
-            AnimationClip ownDie = FindClipInFolder(folder, "lme");
+            AnimationClip ownDie = FindClipInFolder(folder, "lme") ?? FindClipInFolder(folder, "olme");
             if (ownDie != null) die = ownDie;
             if (die != null && IsEmpty(die)) FillFromSheet(die, EnemyDeathSheet, attack ?? idle);
         }
@@ -255,7 +270,7 @@ public static class AnimationSetup
         EditorUtility.SetDirty(clip);
     }
 
-    private static int SetupPrefabs(AnimatorController player, AnimatorController enemy, AnimatorController barrel, AnimatorController scrap)
+    private static int SetupPrefabs(AnimatorController mainPlayer, AnimatorController player, AnimatorController enemy, AnimatorController yakinPlayer, AnimatorController yakinEnemy, AnimatorController bossPlayer, AnimatorController bossEnemy, AnimatorController barrel, AnimatorController scrap)
     {
         int count = 0;
         foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefabs" }))
@@ -268,7 +283,7 @@ public static class AnimationSetup
                 asset.GetComponentInChildren<ScrapPile>(true) == null) continue;
 
             GameObject root = PrefabUtility.LoadPrefabContents(path);
-            if (ApplyTo(root, player, enemy, barrel, scrap))
+            if (ApplyTo(root, mainPlayer, player, enemy, yakinPlayer, yakinEnemy, bossPlayer, bossEnemy, barrel, scrap))
             {
                 PrefabUtility.SaveAsPrefabAsset(root, path);
                 count++;
@@ -278,7 +293,7 @@ public static class AnimationSetup
         return count;
     }
 
-    private static int SetupOpenScenes(AnimatorController player, AnimatorController enemy, AnimatorController barrel, AnimatorController scrap)
+    private static int SetupOpenScenes(AnimatorController mainPlayer, AnimatorController player, AnimatorController enemy, AnimatorController yakinPlayer, AnimatorController yakinEnemy, AnimatorController bossPlayer, AnimatorController bossEnemy, AnimatorController barrel, AnimatorController scrap)
     {
         int count = 0;
         HashSet<GameObject> done = new HashSet<GameObject>();
@@ -290,7 +305,7 @@ public static class AnimationSetup
         foreach (Component comp in targets)
         {
             if (comp == null || !done.Add(comp.gameObject)) continue;
-            if (ApplyTo(comp.gameObject, player, enemy, barrel, scrap))
+            if (ApplyTo(comp.gameObject, mainPlayer, player, enemy, yakinPlayer, yakinEnemy, bossPlayer, bossEnemy, barrel, scrap))
             {
                 EditorSceneManager.MarkSceneDirty(comp.gameObject.scene);
                 count++;
@@ -299,7 +314,7 @@ public static class AnimationSetup
         return count;
     }
 
-    private static bool ApplyTo(GameObject go, AnimatorController player, AnimatorController enemy, AnimatorController barrel, AnimatorController scrap)
+    private static bool ApplyTo(GameObject go, AnimatorController mainPlayer, AnimatorController player, AnimatorController enemy, AnimatorController yakinPlayer, AnimatorController yakinEnemy, AnimatorController bossPlayer, AnimatorController bossEnemy, AnimatorController barrel, AnimatorController scrap)
     {
         AnimatorController ctrl = null;
         Unit unit = go.GetComponentInChildren<Unit>(true);
@@ -307,7 +322,14 @@ public static class AnimationSetup
         {
             DroneUnit drone = unit.GetComponent<DroneUnit>();
             bool ally = drone != null ? drone.isAlly : unit.isPlayerOwned;
-            ctrl = ally ? player : enemy;
+            if (unit.isMainDrone)
+                ctrl = mainPlayer ?? player;
+            else if (drone != null && drone.droneType == DroneType.Melee)
+                ctrl = ally ? (yakinPlayer ?? player) : (yakinEnemy ?? enemy);
+            else if (drone != null && drone.droneType == DroneType.Boss)
+                ctrl = ally ? (bossPlayer ?? player) : (bossEnemy ?? enemy);
+            else
+                ctrl = ally ? player : enemy;
             go = unit.gameObject;
         }
         else if (go.GetComponentInChildren<ExplosiveBarrel>(true) != null)
@@ -332,7 +354,7 @@ public static class AnimationSetup
             anim = Undo.AddComponent<Animator>(host);
             changed = true;
         }
-        if (anim.runtimeAnimatorController == null)
+        if (anim.runtimeAnimatorController != ctrl)
         {
             Undo.RecordObject(anim, "Animator Controller");
             anim.runtimeAnimatorController = ctrl;

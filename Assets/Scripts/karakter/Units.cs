@@ -62,9 +62,11 @@ public class Unit : MonoBehaviour
         baseLocalScale = transform.localScale;
     }
 
-    public void PlayAttack()
+    public void PlayAttack(bool isRanged = false)
     {
         if (dead) return;
+        if (isRanged && AnimUtil.Trigger(animator, AnimUtil.RangedAttack)) return;
+        if (!isRanged && AnimUtil.Trigger(animator, AnimUtil.MeleeAttack)) return;
         AnimUtil.Trigger(animator, AnimUtil.Attack);
     }
 
@@ -88,7 +90,9 @@ public class Unit : MonoBehaviour
 
     public void AddShield(int amount)
     {
+        if (amount <= 0) return;
         currentShield += amount;
+        FloatingText.Spawn(transform.position, "+" + amount + " KALKAN", new Color(0.25f, 0.78f, 1f));
         NotifyUI();
     }
 
@@ -114,7 +118,7 @@ public class Unit : MonoBehaviour
             int absorbed = Mathf.Min(currentShield, damage);
             currentShield -= absorbed;
             damage -= absorbed;
-            if (damage <= 0) FloatingText.Spawn(transform.position, "KALKAN", new Color(0.5f, 0.75f, 1f));
+            if (damage <= 0) FloatingText.Spawn(transform.position, "KALKAN", new Color(0.3f, 0.8f, 1f));
         }
 
         if (damage > 0) FloatingText.Spawn(transform.position, "-" + damage, new Color(1f, 0.35f, 0.3f));
