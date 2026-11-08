@@ -106,7 +106,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExplosiveBarrel
   explosionRadius: 2
-  explosionDamage: 40
+  explosionDamage:
+    min: 25
+    max: 35
   chainDelay: 0.25
   bodyColor: {r: 0.85, g: 0.3, b: 0.15, a: 1}
   previewColor: {r: 1, g: 0.15, b: 0.1, a: 0.4}

@@ -65,16 +65,23 @@ public class LootPickup : MonoBehaviour
         TurnManager tm = TurnManager.Instance;
         if (tm == null || tm.CurrentState != TurnState.PlayerTurn) return;
 
+        Unit standing = null;
         foreach (Unit u in tm.playerUnits)
         {
             if (u == null) continue;
-            if (Vector2.Distance(u.transform.position, basePos) < 0.1f) { Collect(); return; }
+            if (Vector2.Distance(u.transform.position, basePos) < 0.1f) { standing = u; break; }
         }
+
+        // El doluyken alınamayan kartlar: aynı birim üstünde durdukça tekrar denenmez, ayrılıp gelince denenir.
+        if (standing == null) { blockedBy = null; return; }
+        if (standing == blockedBy) return;
+        Collect(standing);
     }
 
-    private void Collect()
+    private Unit blockedBy;
+
+    private void Collect(Unit by)
     {
-        collected = true;
         Vector3 pos = transform.position;
         int line = 0;
 
@@ -82,17 +89,29 @@ public class LootPickup : MonoBehaviour
         {
             ScrapInventory.Add(scrap);
             FloatingText.Spawn(pos, "+" + scrap + " hurda", new Color(1f, 0.9f, 0.3f), line++);
+            scrap = 0;
         }
 
+        var left = new List<CardData>();
         foreach (CardData c in cards)
         {
             if (c == null || CardManager.Instance == null) continue;
-            CardManager.Instance.AddCard(c);
+            if (!CardManager.Instance.AddCard(c)) { left.Add(c); continue; }
             bool isBp = c == blueprint;
             FloatingText.Spawn(pos, (isBp ? "BLUEPRINT: " : "Kart: ") + c.cardName,
                 isBp ? new Color(0.5f, 0.8f, 1f) : new Color(0.6f, 1f, 0.6f), line++);
         }
 
+        if (left.Count > 0)
+        {
+            cards = left;
+            if (!cards.Contains(blueprint)) blueprint = null;
+            blockedBy = by;
+            FloatingText.Spawn(pos, $"EL DOLU ({CardManager.Instance.MaxHandSize})\nkart yerde kaldı", new Color(1f, 0.55f, 0.3f), line);
+            return;
+        }
+
+        collected = true;
         Destroy(gameObject);
     }
 }

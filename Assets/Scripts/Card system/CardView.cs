@@ -169,6 +169,10 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             vr.offsetMin = Vector2.zero;
             vr.offsetMax = Vector2.zero;
             valueText.fontSize = 32f;
+            valueText.enableAutoSizing = true;
+            valueText.fontSizeMin = 16f;
+            valueText.fontSizeMax = 32f;
+            valueText.textWrappingMode = TextWrappingModes.NoWrap;
             valueText.fontStyle = FontStyles.Bold;
         }
 
@@ -304,8 +308,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         if (nameText != null) nameText.text = card.cardName;
         if (valueText != null)
         {
-            int mv = card.MainValue;
-            valueText.text = mv > 0 ? mv.ToString() : "";
+            valueText.text = card.MainValueText;
         }
 
         Unit activeUnit = CardManager.Instance != null ? CardManager.Instance.GetActiveUnit() : null;

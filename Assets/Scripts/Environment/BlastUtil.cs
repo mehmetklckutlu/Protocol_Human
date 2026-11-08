@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class BlastUtil
 {
-    public static void Explode(Vector2Int center, int radius, int damage, Unit exclude)
+    public static void Explode(Vector2Int center, int radius, IntRange damage, Unit exclude)
     {
         GridManager gm = GridManager.Instance;
         if (gm == null) return;
@@ -35,13 +35,13 @@ public static class BlastUtil
             if (b != null && set.Contains(b.Cell)) b.Explode();
     }
 
-    private static void Damage(List<Unit> units, HashSet<Vector2Int> area, int damage, Unit exclude)
+    private static void Damage(List<Unit> units, HashSet<Vector2Int> area, IntRange damage, Unit exclude)
     {
         foreach (Unit u in units)
         {
             if (u == null || u == exclude) continue;
             if (area.Contains(GridManager.Instance.GetGridPosition(u.transform.position)))
-                u.TakeDamage(damage);
+                u.TakeDamage(damage.Roll(), false, 0.8f);
         }
     }
 }

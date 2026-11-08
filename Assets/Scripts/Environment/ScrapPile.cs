@@ -8,12 +8,16 @@ public class ScrapPile : MonoBehaviour
     [Header("Araştırma")]
     [Tooltip("Araştırmanın süresi (saniye). Hurda animasyonu bu süreye göre hızlanır/yavaşlar.")]
     [SerializeField, Min(0.1f)] private float searchDuration = 2f;
-    [SerializeField, Min(0)] private int scrapMin = 1;
-    [SerializeField, Min(0)] private int scrapMax = 5;
+    [Tooltip("Araştırınca bulunan hurda (aralıktan rastgele).")]
+    [SerializeField] private IntRange scrap = new IntRange(2, 5);
     [Tooltip("Araştırmada blueprint bulma ihtimali (0.1 = %10).")]
     [SerializeField, Range(0f, 1f)] private float blueprintChance = 0.1f;
     [Tooltip("Bulunabilecek blueprint kartları (rastgele biri seçilir).")]
     [SerializeField] private List<CardData> blueprints = new List<CardData>();
+    [Tooltip("Araştırmada bulunabilecek tamir kartı (can yeniler).")]
+    [SerializeField] private CardData repairCard;
+    [Tooltip("Tamir kartı bulma ihtimali (0.3 = %30).")]
+    [SerializeField, Range(0f, 1f)] private float repairChance = 0.3f;
     [Tooltip("Açık: sadece savaş dışında araştırılabilir.")]
     [SerializeField] private bool onlyOutOfCombat = true;
 
@@ -153,6 +157,21 @@ public class ScrapPile : MonoBehaviour
             FloatingText.Spawn(transform.position, "ULASILAMIYOR", new Color(1f, 0.6f, 0.3f));
     }
 
+    private readonly List<CardData> droppedCards = new List<CardData>();
+    private CardData droppedBlueprint;
+
+    /// <summary>Kartı ele verir; el doluysa yığının yerine ganimet olarak bırakır.</summary>
+    private string GiveOrDrop(CardData card, bool isBlueprint)
+    {
+        string label = (isBlueprint ? "Blueprint: " : "Kart: ") + card.cardName;
+        if (CardManager.Instance.AddCard(card))
+            return "\n<color=#7CFF8A>" + label + "</color>";
+
+        droppedCards.Add(card);
+        if (isBlueprint) droppedBlueprint = card;
+        return "\n<color=#FF9A55>" + label + " (el dolu, yere bırakıldı)</color>";
+    }
+
     public void StartSearch()
     {
         if (searching || this == null) return;
@@ -184,22 +203,23 @@ public class ScrapPile : MonoBehaviour
             yield return null;
         }
 
-        int scrap = Random.Range(scrapMin, Mathf.Max(scrapMin, scrapMax) + 1);
-        ScrapInventory.Add(scrap);
-        string msg = "+" + scrap + " hurda bulundu";
+        int scrapAmount = scrap.Roll();
+        ScrapInventory.Add(scrapAmount);
+        string msg = "+" + scrapAmount + " hurda bulundu";
 
         if (blueprints.Count > 0 && CardManager.Instance != null && Random.value < blueprintChance)
         {
             CardData bp = blueprints[Random.Range(0, blueprints.Count)];
-            if (bp != null)
-            {
-                CardManager.Instance.AddCard(bp);
-                msg += "\n<color=#7CFF8A>Blueprint: " + bp.cardName + "</color>";
-            }
+            if (bp != null) msg += GiveOrDrop(bp, true);
         }
+
+        if (repairCard != null && CardManager.Instance != null && Random.value < repairChance)
+            msg += GiveOrDrop(repairCard, false);
 
         Node n = gm.GetNode(PileCell);
         if (n != null) n.isWalkable = true;
+        if (droppedCards.Count > 0)
+            LootPickup.Spawn(gm.GetWorldPosition(PileCell), 0, droppedCards, droppedBlueprint);
 
         TurnManager.Instance.ClearBusy();
         ui.EndSearch();

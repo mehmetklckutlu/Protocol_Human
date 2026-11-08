@@ -92,7 +92,16 @@ public class Unit : MonoBehaviour
     {
         if (amount <= 0) return;
         currentShield += amount;
-        FloatingText.Spawn(transform.position, "+" + amount + " KALKAN", new Color(0.25f, 0.78f, 1f));
+        DamageNumber.SpawnShieldGain(transform.position, amount);
+        NotifyUI();
+    }
+
+    public void Heal(int amount)
+    {
+        if (dead || amount <= 0) return;
+        int healed = Mathf.Min(amount, maxHealth - currentHealth);
+        currentHealth += healed;
+        DamageNumber.SpawnHeal(transform.position, healed);
         NotifyUI();
     }
 
@@ -110,20 +119,24 @@ public class Unit : MonoBehaviour
         Die();
     }
 
-    public void TakeDamage(int damage)
+    /// <param name="crit">Kritik vuruş: sayı büyük ve sarı çıkar, kamera daha çok sallanır.</param>
+    /// <param name="roll01">Hasarın aralıktaki yeri (0 = en düşük, 1 = en yüksek); yazının boyutunu etkiler.</param>
+    public void TakeDamage(int damage, bool crit = false, float roll01 = 0.5f)
     {
         if (dead) return;
+        int absorbed = 0;
         if (currentShield > 0)
         {
-            int absorbed = Mathf.Min(currentShield, damage);
+            absorbed = Mathf.Min(currentShield, damage);
             currentShield -= absorbed;
             damage -= absorbed;
-            if (damage <= 0) FloatingText.Spawn(transform.position, "KALKAN", new Color(0.3f, 0.8f, 1f));
         }
 
-        if (damage > 0) FloatingText.Spawn(transform.position, "-" + damage, new Color(1f, 0.35f, 0.3f));
+        if (absorbed > 0) DamageNumber.SpawnBlocked(transform.position, absorbed, damage > 0);
+        if (damage > 0) DamageNumber.Spawn(transform.position, damage, crit, roll01);
 
-        TacticalCamera.Shake(damage > 0 ? 0.13f : 0.06f, 0.16f);
+        float shake = damage <= 0 ? 0.06f : crit ? 0.24f : Mathf.Lerp(0.1f, 0.17f, roll01);
+        TacticalCamera.Shake(shake, crit ? 0.22f : 0.16f);
         if (gameObject.activeInHierarchy)
         {
             if (hitFlashCoroutine != null) StopCoroutine(hitFlashCoroutine);

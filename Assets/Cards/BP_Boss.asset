@@ -17,17 +17,27 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: a1040000000000000000000000000001, type: 3}
   description: 
   cpuCost: 5
-  scrapCost: 10
-  damage: 20
+  scrapCost: 15
+  damage:
+    min: 0
+    max: 0
   range: 1
   hitChance: 1
+  critChance: 0
   stunChance: 0
   stunTurns: 1
-  shield: 15
+  shield:
+    min: 0
+    max: 0
   tauntTurns: 0
+  heal:
+    min: 0
+    max: 0
   cpuRestore: 0
   chargeAll: 0
   selfDestruct: 0
   blastRadius: 2
-  blastDamage: 50
+  blastDamage:
+    min: 0
+    max: 0
   summonPrefab: {fileID: 2846939283180432340, guid: c11e7f61355244e4ca39405d942f3b32, type: 3}

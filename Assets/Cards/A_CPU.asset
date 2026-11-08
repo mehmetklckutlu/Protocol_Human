@@ -18,16 +18,26 @@ MonoBehaviour:
   description: 
   cpuCost: 0
   scrapCost: 0
-  damage: 20
+  damage:
+    min: 0
+    max: 0
   range: 1
   hitChance: 1
+  critChance: 0
   stunChance: 0
   stunTurns: 1
-  shield: 15
+  shield:
+    min: 0
+    max: 0
   tauntTurns: 0
-  cpuRestore: 3
+  heal:
+    min: 0
+    max: 0
+  cpuRestore: 2
   chargeAll: 0
   selfDestruct: 0
   blastRadius: 2
-  blastDamage: 50
+  blastDamage:
+    min: 0
+    max: 0
   summonPrefab: {fileID: 0}

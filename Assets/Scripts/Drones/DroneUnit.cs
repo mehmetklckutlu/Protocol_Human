@@ -19,8 +19,8 @@ public class DroneUnit : MonoBehaviour
     public List<CardData> kit = new List<CardData>();
 
     [Header("Düşman Drone: Ölünce Düşenler")]
-    [Min(0)] public int scrapMin = 2;
-    [Min(0)] public int scrapMax = 5;
+    [Tooltip("Ölünce düşen hurda (aralıktan rastgele).")]
+    public IntRange scrap = new IntRange(2, 4);
     [Tooltip("Kart düşme ihtimali (0.35 = %35). Düşen kart aşağıdaki listeden rastgele seçilir.")]
     [Range(0f, 1f)] public float cardDropChance = 0.35f;
     [Tooltip("Düşebilecek kartlar (yerden bulunan, hurda bedelli sürümler).")]
@@ -94,7 +94,7 @@ public class DroneUnit : MonoBehaviour
     {
         if (isAlly) return;
 
-        int scrap = Random.Range(scrapMin, Mathf.Max(scrapMin, scrapMax) + 1);
+        int scrapAmount = scrap.Roll();
 
         List<CardData> cards = new List<CardData>();
         if (dropCards.Count > 0 && Random.value < cardDropChance)
@@ -110,6 +110,6 @@ public class DroneUnit : MonoBehaviour
             bp = true;
         }
 
-        LootPickup.Spawn(transform.position, scrap, cards, bp ? blueprint : null);
+        LootPickup.Spawn(transform.position, scrapAmount, cards, bp ? blueprint : null);
     }
 }

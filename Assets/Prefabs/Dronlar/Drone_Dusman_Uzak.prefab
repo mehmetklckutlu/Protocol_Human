@@ -232,7 +232,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!114 &4760451823863166694
 MonoBehaviour:
@@ -276,7 +276,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
   moveSpeed: 5
-  attackDamage: 15
+  attackDamage:
+    min: 9
+    max: 13
   attackRange: 4
   targetMode: 1
   visionRange: 15
@@ -300,15 +302,16 @@ MonoBehaviour:
   isAlly: 0
   charge: 3
   kit: []
-  scrapMin: 2
-  scrapMax: 5
+  scrap:
+    min: 2
+    max: 4
   cardDropChance: 0.35
   dropCards:
-  - {fileID: 11400000, guid: c4c4631d483269443a19457916dfa5a8, type: 2}
   - {fileID: 11400000, guid: 4f17aa0c375c8a349bf32e71357c595a, type: 2}
   - {fileID: 11400000, guid: 75661e14aa101cc41b2f560a51be3edd, type: 2}
+  - {fileID: 11400000, guid: 9a5caae89d40c9b4ba10eec44cedbc0a, type: 2}
   blueprint: {fileID: 11400000, guid: b97b65a1788affa46887990384d9e80b, type: 2}
-  blueprintChance: 0.25
+  blueprintChance: 0.15
 --- !u!95 &8031256727027463571
 Animator:
   serializedVersion: 7

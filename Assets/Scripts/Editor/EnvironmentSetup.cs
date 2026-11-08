@@ -225,8 +225,7 @@ public static class EnvironmentSetup
             ai.attackRange = type == DroneType.Ranged ? 4 : 1;
             ai.targetMode = type == DroneType.Ranged ? EnemyTargetMode.LowestHealth : EnemyTargetMode.Nearest;
 
-            d.scrapMin = type == DroneType.Boss ? 5 : 2;
-            d.scrapMax = type == DroneType.Boss ? 10 : 5;
+            d.scrap = type == DroneType.Boss ? new IntRange(6, 10) : new IntRange(2, 4);
             d.cardDropChance = type == DroneType.Boss ? 0.5f : 0.35f;
             d.blueprint = blueprint;
             d.blueprintChance = 0.25f;

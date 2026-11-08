@@ -185,8 +185,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   isPlayerOwned: 1
-  maxHealth: 90
-  currentHealth: 90
+  maxHealth: 110
+  currentHealth: 110
   maxMovement: 3
   currentMovement: 5
   maxCPU: 0
@@ -220,8 +220,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 98b896f8672490846927c628565248d1, type: 2}
   - {fileID: 11400000, guid: e70f4951b8723d040b571ad4ef82df1f, type: 2}
   - {fileID: 11400000, guid: c7dcfe2556681c24e9a3cb1314089088, type: 2}
-  scrapMin: 2
-  scrapMax: 5
+  scrap:
+    min: 2
+    max: 4
   cardDropChance: 0.35
   dropCards: []
   blueprint: {fileID: 0}

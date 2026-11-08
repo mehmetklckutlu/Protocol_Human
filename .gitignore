@@ -15,3 +15,20 @@
 *.userprefs
 *.pidb
 *.booproj
+# IDE / Unity tarafından üretilen dosyalar
+.vs/
+*.slnx
+*.sln.DotSettings.user
+.idea/
+
+# İşletim sistemi
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Unity çökme / profil dosyaları
+sysinfo.txt
+*.pdb
+*.mdb
+crashlytics-build.properties
+/[Rr]ecordings/

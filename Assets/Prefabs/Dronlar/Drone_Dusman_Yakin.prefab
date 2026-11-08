@@ -185,8 +185,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   isPlayerOwned: 0
-  maxHealth: 100
-  currentHealth: 100
+  maxHealth: 60
+  currentHealth: 60
   maxMovement: 4
   currentMovement: 0
   maxCPU: 2
@@ -214,7 +214,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
   moveSpeed: 5
-  attackDamage: 20
+  attackDamage:
+    min: 11
+    max: 16
   attackRange: 1
   targetMode: 0
   visionRange: 15
@@ -238,15 +240,17 @@ MonoBehaviour:
   isAlly: 0
   charge: 3
   kit: []
-  scrapMin: 2
-  scrapMax: 5
-  cardDropChance: 0.35
+  scrap:
+    min: 2
+    max: 4
+  cardDropChance: 0.3
   dropCards:
   - {fileID: 11400000, guid: 6a0ef395e64f03a49afe77c8e72fc37b, type: 2}
   - {fileID: 11400000, guid: e2d2bad455e451e4a9bb3d31dc27940c, type: 2}
   - {fileID: 11400000, guid: 483ee814b634d2f4a9cca7db0007b2f7, type: 2}
+  - {fileID: 11400000, guid: 9a5caae89d40c9b4ba10eec44cedbc0a, type: 2}
   blueprint: {fileID: 11400000, guid: c4d0f152999135548857c0b4652e42a1, type: 2}
-  blueprintChance: 0.25
+  blueprintChance: 0.12
 --- !u!95 &4183446899936856590
 Animator:
   serializedVersion: 7

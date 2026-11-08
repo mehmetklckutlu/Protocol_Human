@@ -42372,10 +42372,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 119654360}
     m_Modifications:
-    - target: {fileID: 1555260985131835967, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
-      propertyPath: cardDropChance
-      value: 0.416
-      objectReference: {fileID: 0}
     - target: {fileID: 5682231614567020204, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 34.29068
@@ -43240,10 +43236,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 119654360}
     m_Modifications:
-    - target: {fileID: 1555260985131835967, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
-      propertyPath: cardDropChance
-      value: 0.416
-      objectReference: {fileID: 0}
     - target: {fileID: 5682231614567020204, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 94.29068
@@ -44809,10 +44801,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 119654360}
     m_Modifications:
-    - target: {fileID: 1555260985131835967, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
-      propertyPath: cardDropChance
-      value: 0.416
-      objectReference: {fileID: 0}
     - target: {fileID: 5682231614567020204, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 83.29068
@@ -48962,10 +48950,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 119654360}
     m_Modifications:
-    - target: {fileID: 1555260985131835967, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
-      propertyPath: cardDropChance
-      value: 0.416
-      objectReference: {fileID: 0}
     - target: {fileID: 5682231614567020204, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 73.29068
@@ -53457,10 +53441,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 119654360}
     m_Modifications:
-    - target: {fileID: 1555260985131835967, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
-      propertyPath: cardDropChance
-      value: 0.416
-      objectReference: {fileID: 0}
     - target: {fileID: 5682231614567020204, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 58.29068
@@ -160900,10 +160880,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 119654360}
     m_Modifications:
-    - target: {fileID: 1555260985131835967, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
-      propertyPath: cardDropChance
-      value: 0.416
-      objectReference: {fileID: 0}
     - target: {fileID: 5682231614567020204, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 58.29068
@@ -162554,10 +162530,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 119654360}
     m_Modifications:
-    - target: {fileID: 1555260985131835967, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
-      propertyPath: cardDropChance
-      value: 0.416
-      objectReference: {fileID: 0}
     - target: {fileID: 5682231614567020204, guid: b62a5f8a9c6ece34ab6f9559cd3ce99b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 86.29068
@@ -166821,12 +166793,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03f525cfe8941644da8e993e53f593dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardManage
-  turnCards:
-  - {fileID: 11400000, guid: 69b07c09adeb62a4ab7c4e7d8707de53, type: 2}
-  - {fileID: 11400000, guid: 208a5d3920a003c448aa6692543998ec, type: 2}
+  fixedCards:
   - {fileID: 11400000, guid: f9b73892fb674ef458eb578e36b51035, type: 2}
   - {fileID: 11400000, guid: f1d6c1014a1645442936ec7e3df59eac, type: 2}
+  randomPool:
+  - card: {fileID: 11400000, guid: 69b07c09adeb62a4ab7c4e7d8707de53, type: 2}
+    weight: 30
+  - card: {fileID: 11400000, guid: 8a91f0a4534c55a4ea6b9a2de40e9ff6, type: 2}
+    weight: 18
+  - card: {fileID: 11400000, guid: ce20de8e9ee18a14abdfeb26a781a9bd, type: 2}
+    weight: 15
+  - card: {fileID: 11400000, guid: cc126da51dea0214babf1bfe82284d24, type: 2}
+    weight: 15
+  - card: {fileID: 11400000, guid: f06b981966bfaef489cdd3f08d0d893e, type: 2}
+    weight: 15
+  - card: {fileID: 11400000, guid: 208a5d3920a003c448aa6692543998ec, type: 2}
+    weight: 10
+  maxHandSize: 9
   startingCards: []
+  allyAutoEndDelay: 0.6
 --- !u!4 &2066272914
 Transform:
   m_ObjectHideFlags: 0

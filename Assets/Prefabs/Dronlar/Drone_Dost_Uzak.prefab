@@ -341,7 +341,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
 --- !u!114 &1496056076222870271
 MonoBehaviour:
@@ -370,8 +370,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   isPlayerOwned: 1
-  maxHealth: 30
-  currentHealth: 30
+  maxHealth: 35
+  currentHealth: 35
   maxMovement: 3
   currentMovement: 5
   maxCPU: 0
@@ -405,8 +405,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 94b7a46f94d2d5744a06c73bfb66c9d2, type: 2}
   - {fileID: 11400000, guid: 5a0df5537f7f35a48951afde8d405410, type: 2}
   - {fileID: 11400000, guid: 73f021f6e20e77e4c9b7987456e63569, type: 2}
-  scrapMin: 2
-  scrapMax: 5
+  scrap:
+    min: 2
+    max: 4
   cardDropChance: 0.35
   dropCards: []
   blueprint: {fileID: 0}

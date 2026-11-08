@@ -1,18 +1,35 @@
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 
 public class CardManager : MonoBehaviour
 {
     public static CardManager Instance { get; private set; }
 
-    [Header("Ana Drone: Her Tur Başında Elde Olması Gereken Kartlar")]
-    [Tooltip("Bu kartlar her tur başında, elde yoksa yeniden verilir (bedelsiz).")]
-    [SerializeField] private List<CardData> turnCards = new List<CardData>();
+    [Header("Ana Drone: Sabit Kartlar")]
+    [Tooltip("Her tur başında, elde yoksa yeniden verilir. Birikmez: elde zaten varsa ikinci kopya gelmez.")]
+    [FormerlySerializedAs("turnCards")]
+    [SerializeField] private List<CardData> fixedCards = new List<CardData>();
+
+    [Header("Ana Drone: Rastgele Kart")]
+    [Tooltip("Savaşta her tur başında bu havuzdan ağırlığa göre 1 kart çekilir. Oynanmayan rastgele kartlar elde birikir.")]
+    [SerializeField] private List<WeightedCard> randomPool = new List<WeightedCard>();
+    [Tooltip("Elde en fazla kaç kart olabilir (sabit kartlar dahil).")]
+    [SerializeField, Min(1)] private int maxHandSize = 9;
 
     [Header("Ana Drone: Oyun Başında Elde Olan Kartlar (isteğe bağlı)")]
     [SerializeField] private List<CardData> startingCards = new List<CardData>();
+
+    [Header("Dost Drone")]
+    [Tooltip("Dost drone kartını oynadıktan sonra sıranın otomatik geçmesi için bekleme (animasyon/yazı görünsün diye).")]
+    [SerializeField, Min(0f)] private float allyAutoEndDelay = 0.6f;
+
+    public int MaxHandSize => maxHandSize;
+    /// <summary>Elde yeni (sabit olmayan) bir kart için yer var mı? Sabit kartların yeri her zaman ayrılmıştır.</summary>
+    public bool HasRoom => NonFixedCount() < maxHandSize - fixedCards.Count;
 
     public List<CardData> Hand { get; } = new List<CardData>();
     public event Action OnHandChanged;
@@ -87,23 +104,89 @@ public class CardManager : MonoBehaviour
         }
     }
 
-    public void AddCard(CardData card)
+    /// <summary>Ele kart ekler. El doluysa eklemez ve false döner (kart çağıranda kalır).</summary>
+    public bool AddCard(CardData card)
     {
-        if (card == null) return;
+        if (card == null) return false;
+        if (!HasRoom) return false;
         Hand.Add(card);
         NotifyHandChanged();
+        return true;
     }
 
+    private int NonFixedCount()
+    {
+        int n = 0;
+        foreach (CardData c in Hand) if (c != null && !fixedCards.Contains(c)) n++;
+        return n;
+    }
+
+    /// <summary>
+    /// Ana drone'un tur başı: sabit kartlar elde yoksa geri gelir (birikmez, hep en başta durur),
+    /// savaştaysa havuzdan 1 rastgele kart çekilir (el doluysa çekilmez).
+    /// </summary>
     public void OnPlayerTurnStart()
     {
         CancelTargeting();
         activeUnit = null;
 
-        foreach (CardData c in turnCards)
+        for (int i = 0; i < fixedCards.Count; i++)
         {
-            if (c != null && !Hand.Contains(c)) Hand.Add(c);
+            CardData c = fixedCards[i];
+            if (c != null && !Hand.Contains(c)) Hand.Insert(Mathf.Min(i, Hand.Count), c);
         }
+
+        bool inCombat = TurnManager.Instance != null && TurnManager.Instance.IsInCombat();
+        if (inCombat) DrawRandom();
+
         NotifyHandChanged();
+    }
+
+    private void DrawRandom()
+    {
+        CardData drawn = PickRandom();
+        if (drawn == null) return;
+
+        Unit main = GetMainUnit();
+        if (!HasRoom)
+        {
+            if (main != null) FloatingText.Spawn(main.transform.position, "EL DOLU", new Color(1f, 0.55f, 0.3f), 1);
+            return;
+        }
+        Hand.Add(drawn);
+        if (main != null) FloatingText.Spawn(main.transform.position, "+ " + drawn.cardName, new Color(0.75f, 0.9f, 1f), 1);
+    }
+
+    private CardData PickRandom()
+    {
+        bool hasAllies = HasAllyDrones();
+        bool Usable(WeightedCard w) => w != null && w.card != null && w.weight > 0 && (hasAllies || w.card.chargeAll <= 0);
+
+        int total = 0;
+        foreach (WeightedCard w in randomPool) if (Usable(w)) total += w.weight;
+        if (total <= 0) return null;
+
+        int roll = UnityEngine.Random.Range(0, total);
+        foreach (WeightedCard w in randomPool)
+        {
+            if (!Usable(w)) continue;
+            if (roll < w.weight) return w.card;
+            roll -= w.weight;
+        }
+        return null;
+    }
+
+    /// <summary>Şarj gibi sadece dost drone'larla işe yarayan kartlar, sahada dost drone yokken çekilmez.</summary>
+    private static bool HasAllyDrones()
+    {
+        if (TurnManager.Instance == null) return false;
+        foreach (Unit u in TurnManager.Instance.playerUnits)
+        {
+            if (u == null || u.IsDead) continue;
+            DroneUnit d = u.GetComponent<DroneUnit>();
+            if (d != null && d.isAlly) return true;
+        }
+        return false;
     }
 
     public void RefreshUI() { NotifyHandChanged(); }
@@ -123,6 +206,8 @@ public class CardManager : MonoBehaviour
 
         if (card.scrapCost > ScrapInventory.Count) return false;
         if (card.cardType == CardType.Summon && card.summonPrefab == null) return false;
+        // Ana drone kendini patlatırsa oyun biter; bu kart sadece dost drone'lar içindir.
+        if (card.selfDestruct && unit.isMainDrone) return false;
         return true;
     }
 
@@ -176,7 +261,9 @@ public class CardManager : MonoBehaviour
         Pay(card, unit);
         Vector3 pos = unit.transform.position;
 
-        if (card.shield > 0) unit.AddShield(card.shield);
+        if (card.cardType == CardType.Defense && !card.shield.IsZero) unit.AddShield(card.RollShield());
+
+        if (!card.heal.IsZero) unit.Heal(card.heal.Roll());
 
         if (card.tauntTurns > 0)
         {
@@ -212,6 +299,7 @@ public class CardManager : MonoBehaviour
         }
 
         NotifyHandChanged();
+        AfterCardPlayed(unit);
     }
 
     private void BeginTargeting(CardData card)
@@ -322,10 +410,12 @@ public class CardManager : MonoBehaviour
                 target.stunTurns = Mathf.Max(target.stunTurns, card.stunTurns);
                 FloatingText.Spawn(target.transform.position, "STUN!", new Color(1f, 0.9f, 0.3f), 1);
             }
-            target.TakeDamage(card.damage);
+            int dmg = card.RollDamage(out bool crit, out float roll01);
+            target.TakeDamage(dmg, crit, roll01);
         }
 
         NotifyHandChanged();
+        AfterCardPlayed(attacker);
     }
 
     private void ExecuteBarrelAttack(CardData card, ExplosiveBarrel barrel)
@@ -341,6 +431,33 @@ public class CardManager : MonoBehaviour
         attacker.PlayAttack(card != null && card.range > 1);
         if (RollHit(card, barrel.transform.position)) barrel.Explode();
         NotifyHandChanged();
+        AfterCardPlayed(attacker);
+    }
+
+    /// <summary>
+    /// Dost drone'lar turda sadece kart hakları kadar (1) kart oynar; hakkı bitince sıra kısa bir beklemeden sonra
+    /// otomatik geçer. Kendini patlatan drone ölür, sırayı TurnManager zaten geçirir.
+    /// </summary>
+    private void AfterCardPlayed(Unit unit)
+    {
+        if (unit == null || unit.usesCpu || unit.IsDead) return;
+        if (unit.cardsPlayedThisTurn < unit.cardsPerTurn) return;
+
+        TurnManager tm = TurnManager.Instance;
+        if (tm == null || !tm.IsInCombat() || tm.CurrentPlayerUnit != unit) return;
+        StartCoroutine(AutoEndAllyTurn(unit));
+    }
+
+    private IEnumerator AutoEndAllyTurn(Unit unit)
+    {
+        TurnManager tm = TurnManager.Instance;
+        tm.SetBusy();
+        yield return new WaitForSeconds(allyAutoEndDelay);
+        tm.ClearBusy();
+
+        if (tm.IsGameOver) yield break;
+        if (unit != null && !unit.IsDead && tm.CurrentPlayerUnit == unit && tm.CurrentState == TurnState.PlayerTurn)
+            tm.EndPlayerTurn();
     }
 
     private void PlaySummon(CardData card)

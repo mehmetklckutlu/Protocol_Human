@@ -11,7 +11,8 @@ public class EnemyAI : MonoBehaviour
 
     [Header("Yapay Zeka Ayarları")]
     public float moveSpeed = 5f;
-    public int attackDamage = 20;
+    [Tooltip("Her saldırıda bu aralıktan rastgele hasar atılır.")]
+    public IntRange attackDamage = new IntRange(10, 16);
     [Tooltip("Kaç kare uzaktan saldırabilir (1 = yakın dövüş).")]
     [Min(1)] public int attackRange = 1;
     [Tooltip("Nearest: en yakın rakip. LowestHealth: canı en düşük rakip. (Taunt varsa her zaman taunt'layan hedeflenir.)")]
@@ -146,8 +147,9 @@ public class EnemyAI : MonoBehaviour
             {
                 Debug.Log($"<color=orange>{gameObject.name} SALDIRDI!</color>");
                 myUnit.UseCPU(1);
-                myUnit.PlayAttack();
-                target.TakeDamage(attackDamage);
+                myUnit.PlayAttack(attackRange > 1);
+                int dmg = attackDamage.Roll();
+                target.TakeDamage(dmg, false, attackDamage.Normalize(dmg));
                 hasAttackedThisTurn = true;
                 yield return new WaitForSeconds(0.75f);
             }

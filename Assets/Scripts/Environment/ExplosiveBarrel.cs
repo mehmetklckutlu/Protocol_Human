@@ -9,7 +9,8 @@ public class ExplosiveBarrel : MonoBehaviour
     [Header("Patlama")]
     [Tooltip("Patlamanın kaç kare yarıçapında etki ettiği (1 = 3x3, 2 = 5x5).")]
     [SerializeField, Min(0)] private int explosionRadius = 2;
-    [SerializeField, Min(0)] private int explosionDamage = 40;
+    [Tooltip("Alandaki her birime bu aralıktan ayrı ayrı hasar atılır.")]
+    [SerializeField] private IntRange explosionDamage = new IntRange(25, 35);
     [Tooltip("Zincirleme patlamada diğer varilin patlamadan önce bekleme süresi.")]
     [SerializeField] private float chainDelay = 0.25f;
 
@@ -157,7 +158,7 @@ public class ExplosiveBarrel : MonoBehaviour
         {
             if (u == null) continue;
             if (area.Contains(gm.GetGridPosition(u.transform.position)))
-                u.TakeDamage(explosionDamage);
+                u.TakeDamage(explosionDamage.Roll(), false, 0.8f);
         }
     }
 }
