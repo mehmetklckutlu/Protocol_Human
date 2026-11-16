@@ -36,11 +36,14 @@ public class CardManager : MonoBehaviour
 
     private Unit activeUnit;
     private CardData pendingCard;
+    // Aynı karttan birden fazla varsa hangisinin seçildiğini ayırt etmek için eldeki sırası.
+    private int pendingIndex = -1;
     private int clickConsumedFrame = -1;
     private ExplosiveBarrel hoveredBarrel;
 
     public bool IsTargeting => pendingCard != null;
     public CardData PendingCard => pendingCard;
+    public int PendingIndex => pendingIndex;
 
     public bool BlocksMapInput => IsTargeting || clickConsumedFrame == Time.frameCount;
 
@@ -213,9 +216,17 @@ public class CardManager : MonoBehaviour
 
     public void OnCardClicked(CardData card)
     {
-        if (!CurrentHand.Contains(card)) return;
+        OnCardClicked(card, CurrentHand.IndexOf(card));
+    }
 
-        if (pendingCard == card)
+    /// <summary>handIndex: kartın eldeki sırası. Aynı karttan iki tane varken sadece tıklanan oynanır/seçilir.</summary>
+    public void OnCardClicked(CardData card, int handIndex)
+    {
+        List<CardData> hand = CurrentHand;
+        if (handIndex < 0 || handIndex >= hand.Count || hand[handIndex] != card) handIndex = hand.IndexOf(card);
+        if (handIndex < 0) return;
+
+        if (pendingCard == card && pendingIndex == handIndex)
         {
             CancelTargeting();
             NotifyHandChanged();
@@ -227,9 +238,9 @@ public class CardManager : MonoBehaviour
 
         switch (card.cardType)
         {
-            case CardType.Attack: BeginTargeting(card); break;
-            case CardType.Summon: PlaySummon(card); break;
-            default: PlayImmediate(card); break;
+            case CardType.Attack: BeginTargeting(card, handIndex); break;
+            case CardType.Summon: PlaySummon(card, handIndex); break;
+            default: PlayImmediate(card, handIndex); break;
         }
     }
 
@@ -237,12 +248,13 @@ public class CardManager : MonoBehaviour
     {
         if (pendingCard == null) return;
         pendingCard = null;
+        pendingIndex = -1;
         ClearBarrelPreview();
         if (HighlightManager.Instance != null) HighlightManager.Instance.ClearHighlights();
         NotifyHandChanged();
     }
 
-    private void Pay(CardData card, Unit unit)
+    private void Pay(CardData card, Unit unit, int handIndex = -1)
     {
         bool fromMainHand = ReferenceEquals(CurrentHand, Hand);
 
@@ -250,15 +262,20 @@ public class CardManager : MonoBehaviour
         if (unit.usesCpu) unit.UseCPU(card.cpuCost);
         else unit.cardsPlayedThisTurn++;
 
-        if (fromMainHand) Hand.Remove(card);
+        if (fromMainHand)
+        {
+            // Oynanan kopyayı kaldır (aynı karttan birden fazla varsa doğru olanı).
+            if (handIndex >= 0 && handIndex < Hand.Count && Hand[handIndex] == card) Hand.RemoveAt(handIndex);
+            else Hand.Remove(card);
+        }
     }
 
-    private void PlayImmediate(CardData card)
+    private void PlayImmediate(CardData card, int handIndex = -1)
     {
         Unit unit = GetActiveUnit();
         if (unit == null) return;
 
-        Pay(card, unit);
+        Pay(card, unit, handIndex);
         Vector3 pos = unit.transform.position;
 
         if (card.cardType == CardType.Defense && !card.shield.IsZero) unit.AddShield(card.RollShield());
@@ -302,7 +319,7 @@ public class CardManager : MonoBehaviour
         AfterCardPlayed(unit);
     }
 
-    private void BeginTargeting(CardData card)
+    private void BeginTargeting(CardData card, int handIndex = -1)
     {
         List<Unit> targets = GetTargetsInRange(card);
         List<ExplosiveBarrel> barrels = GetBarrelsInRange(card);
@@ -314,6 +331,7 @@ public class CardManager : MonoBehaviour
         }
 
         pendingCard = card;
+        pendingIndex = handIndex;
 
         List<Node> nodes = new List<Node>();
         foreach (Unit t in targets)
@@ -396,8 +414,9 @@ public class CardManager : MonoBehaviour
         Unit attacker = GetActiveUnit();
         if (attacker == null || target == null) { CancelTargeting(); return; }
 
-        Pay(card, attacker);
+        Pay(card, attacker, pendingIndex);
         pendingCard = null;
+        pendingIndex = -1;
         ClearBarrelPreview();
         HighlightManager.Instance.ClearHighlights();
 
@@ -423,8 +442,9 @@ public class CardManager : MonoBehaviour
         Unit attacker = GetActiveUnit();
         if (attacker == null || barrel == null) { CancelTargeting(); return; }
 
-        Pay(card, attacker);
+        Pay(card, attacker, pendingIndex);
         pendingCard = null;
+        pendingIndex = -1;
         ClearBarrelPreview();
         HighlightManager.Instance.ClearHighlights();
 
@@ -460,7 +480,7 @@ public class CardManager : MonoBehaviour
             tm.EndPlayerTurn();
     }
 
-    private void PlaySummon(CardData card)
+    private void PlaySummon(CardData card, int handIndex = -1)
     {
         Unit caster = GetActiveUnit();
         if (caster == null) return;
@@ -489,7 +509,7 @@ public class CardManager : MonoBehaviour
             return;
         }
 
-        Pay(card, caster);
+        Pay(card, caster, handIndex);
 
         GameObject go = Instantiate(card.summonPrefab, GridManager.Instance.GetWorldPosition(spot.Value), Quaternion.identity);
         Unit ally = go.GetComponent<Unit>();

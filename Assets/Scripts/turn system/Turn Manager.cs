@@ -27,6 +27,8 @@ public class TurnManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        // Sahnelerde Turu Bitir butonu atanmamışsa adından bul; savaş dışında gizlenebilsin.
+        if (endTurnButton == null) endTurnButton = GameObject.Find("EndTurn_Button");
     }
 
     private void Start()

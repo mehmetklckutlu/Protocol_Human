@@ -253,6 +253,9 @@ public class UnitMovement : MonoBehaviour
     private IEnumerator MoveAlongPath(List<Node> path, bool combatMove, System.Action onArrive)
     {
         isMoving = true;
+        // Ana drone yürürken kamera onu takip etsin (oyuncu kamerayı elle kaydırınca takip bırakılır).
+        if (myUnit != null && myUnit.isPlayerOwned && myUnit.isMainDrone && TacticalCamera.Instance != null)
+            TacticalCamera.Instance.FollowUnit(transform);
         pendingRedirectPath = null;
         pendingArrivalAction = onArrive;
 

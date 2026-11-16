@@ -71,8 +71,14 @@ public class CardHandUI : MonoBehaviour
         foreach (Transform child in old) { child.SetParent(null, false); Destroy(child.gameObject); }
 
         List<CardData> validCards = new List<CardData>();
-        foreach (CardData card in cm.CurrentHand)
-            if (card != null) validCards.Add(card);
+        List<int> handIndices = new List<int>();
+        List<CardData> hand = cm.CurrentHand;
+        for (int h = 0; h < hand.Count; h++)
+        {
+            if (hand[h] == null) continue;
+            validCards.Add(hand[h]);
+            handIndices.Add(h);
+        }
 
         FitToWidth(validCards.Count);
 
@@ -85,7 +91,10 @@ public class CardHandUI : MonoBehaviour
             CardData card = validCards[i];
             CardView view = Instantiate(cardPrefab, container);
             view.SetHandSlot(i, validCards.Count, playIntro);
-            view.Setup(card, cm.CanPlay(card), cm.PendingCard == card);
+            int handIndex = handIndices[i];
+            // Sadece tıklanan kopya seçili görünsün; aynı türden diğer kart yerinde kalsın.
+            bool selected = cm.PendingCard == card && cm.PendingIndex == handIndex;
+            view.Setup(card, cm.CanPlay(card), selected, handIndex);
         }
     }
 }

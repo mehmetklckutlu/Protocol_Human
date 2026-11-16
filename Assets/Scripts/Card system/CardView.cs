@@ -298,7 +298,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
     }
 
-    public void Setup(CardData card, bool interactable, bool selected)
+    public void Setup(CardData card, bool interactable, bool selected, int handIndex = -1)
     {
         EnsureEnhancedVisuals();
 
@@ -366,7 +366,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         if (button != null)
         {
             button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(() => CardManager.Instance.OnCardClicked(card));
+            button.onClick.AddListener(() => CardManager.Instance.OnCardClicked(card, handIndex));
             button.interactable = interactable;
         }
 
