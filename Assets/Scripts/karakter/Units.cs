@@ -78,6 +78,7 @@ public class Unit : MonoBehaviour
     public void PlayAttack(bool isRanged = false)
     {
         if (dead) return;
+        Sfx.Play(isRanged ? "attack_ranged" : "attack_melee", 0.8f);
         if (isRanged && AnimUtil.Trigger(animator, AnimUtil.RangedAttack)) return;
         if (!isRanged && AnimUtil.Trigger(animator, AnimUtil.MeleeAttack)) return;
         AnimUtil.Trigger(animator, AnimUtil.Attack);
@@ -105,12 +106,14 @@ public class Unit : MonoBehaviour
     {
         if (amount <= 0) return;
         currentShield += amount;
+        Sfx.Play("shield", 0.7f);
         DamageNumber.SpawnShieldGain(transform.position, amount);
         NotifyUI();
     }
 
     public void RestoreCPU(int amount)
     {
+        if (amount > 0) Sfx.Play("cpu_restore", 0.6f, 0.04f, 0.15f);
         currentCPU = Mathf.Min(maxCPU, currentCPU + amount);
         NotifyUI();
     }
@@ -137,6 +140,8 @@ public class Unit : MonoBehaviour
         }
 
         if (absorbed > 0) DamageNumber.SpawnBlocked(transform.position, absorbed, damage > 0);
+        if (damage > 0) Sfx.Play(crit ? "crit" : (isPlayerOwned && isMainDrone ? "player_hurt" : "hit"), 0.85f, 0.08f, 0.03f);
+        else if (absorbed > 0) Sfx.Play("shield_hit", 0.7f, 0.06f, 0.03f);
         if (damage > 0) DamageNumber.Spawn(transform.position, damage, crit, roll01);
 
         float shake = damage <= 0 ? 0.06f : crit ? 0.24f : Mathf.Lerp(0.1f, 0.17f, roll01);
@@ -201,6 +206,7 @@ public class Unit : MonoBehaviour
         if (dead) return;
         dead = true;
         Debug.Log(gameObject.name + " yok edildi!");
+        Sfx.Play(isMainDrone ? "game_over" : "unit_death", 0.85f, 0.06f, 0.05f);
 
         OnDeath?.Invoke(this);
 

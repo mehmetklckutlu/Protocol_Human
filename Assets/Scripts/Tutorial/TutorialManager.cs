@@ -44,6 +44,8 @@ public class TutorialManager : MonoBehaviour
 
     [Header("Yazı")]
     [SerializeField, Min(0f)] private float charDelay = 0.012f;
+    [Tooltip("Test Kontrol Ünitesi'nin konuşma sesinin perdesi (1 = normal, düşük = daha kalın).")]
+    [SerializeField, Range(0.5f, 2f)] private float voicePitch = 1f;
 
     private const string Speaker = "TEST KONTROL ÜNİTESİ";
     private static readonly Color Cyan = new Color(0.35f, 0.95f, 1f);
@@ -282,6 +284,7 @@ public class TutorialManager : MonoBehaviour
 
         if (FogOfWar.Instance != null) FogOfWar.Instance.RebuildBlockers();
         if (n > 0) FloatingText.Spawn(center / n, "GEÇİT AÇILDI", Cyan, 1);
+        Sfx.Play("gate_open", 0.8f, 0.02f, 0.3f);
     }
 
     private void Update()
@@ -307,6 +310,7 @@ public class TutorialManager : MonoBehaviour
         if (CardManager.Instance != null) CardManager.Instance.CancelTargeting();
         dialogRoot.SetActive(true);
         dialogSpeaker.text = Speaker;
+        Sfx.Play("dialog_open", 0.5f);
 
         for (int i = 0; i < pages.Length; i++)
         {
@@ -316,6 +320,7 @@ public class TutorialManager : MonoBehaviour
             int total = dialogBody.textInfo.characterCount;
             dialogBody.maxVisibleCharacters = 0;
             continuePressed = false;
+            if (pages[i].Contains("DOĞRULANDI")) Sfx.Play("test_passed", 0.7f, 0f, 0.3f);
 
             float t = 0f;
             int shown = 0;
@@ -323,8 +328,10 @@ public class TutorialManager : MonoBehaviour
             {
                 if (continuePressed) { continuePressed = false; break; }
                 t += Time.unscaledDeltaTime;
+                int prev = shown;
                 shown = charDelay <= 0f ? total : Mathf.Min(total, Mathf.FloorToInt(t / charDelay));
                 dialogBody.maxVisibleCharacters = shown;
+                if (shown > prev) PlayVoiceFor(dialogBody.textInfo, prev, shown);
                 yield return null;
             }
             dialogBody.maxVisibleCharacters = 99999;
@@ -333,10 +340,25 @@ public class TutorialManager : MonoBehaviour
             continuePressed = false;
             yield return new WaitUntil(() => continuePressed);
             continuePressed = false;
+            Sfx.Play("ui_click", 0.45f);
         }
 
         dialogRoot.SetActive(false);
         yield return null;
+    }
+
+    // Robot konuşma sesi: yeni görünen harflerden biri harf/rakamsa kısa bir bip çalar
+    // (Sfx.Voice kendi içinde hızı sınırlar, böylece konuşma gibi ritmik duyulur).
+    private void PlayVoiceFor(TMP_TextInfo info, int from, int to)
+    {
+        for (int c = from; c < to && c < info.characterCount; c++)
+        {
+            if (char.IsLetterOrDigit(info.characterInfo[c].character))
+            {
+                Sfx.Voice(voicePitch);
+                return;
+            }
+        }
     }
 
     private void SetObjective(string title, string text)
@@ -348,6 +370,7 @@ public class TutorialManager : MonoBehaviour
 
     private void ShowFinalScreen()
     {
+        Sfx.Play("mission_ready", 0.8f, 0f, 1f);
         GameObject root = MakePanel(canvas.transform, "TestComplete", new Color(0f, 0.02f, 0.04f, 0.9f));
         Stretch(root.GetComponent<RectTransform>());
 
@@ -377,6 +400,7 @@ public class TutorialManager : MonoBehaviour
 
     private void StartMission()
     {
+        Sfx.Play("ui_click", 0.6f);
         ScrapInventory.Reset();
         Time.timeScale = 1f;
         if (!string.IsNullOrEmpty(nextScene) && Application.CanStreamedLevelBeLoaded(nextScene))

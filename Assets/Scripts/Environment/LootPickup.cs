@@ -82,6 +82,7 @@ public class LootPickup : MonoBehaviour
 
     private void Collect(Unit by)
     {
+        Sfx.Play("loot_pickup", 0.65f);
         Vector3 pos = transform.position;
         int line = 0;
 

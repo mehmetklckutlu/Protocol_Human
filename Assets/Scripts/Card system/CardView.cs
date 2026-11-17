@@ -550,6 +550,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     public void OnPointerEnter(PointerEventData eventData)
     {
         hovered = true;
+        Sfx.Play("ui_hover", 0.3f, 0.06f, 0.06f);
         UpdateSortingOrder();
     }
 

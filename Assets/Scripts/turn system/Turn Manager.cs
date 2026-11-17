@@ -137,6 +137,7 @@ public class TurnManager : MonoBehaviour
 
         if (inCombat && !wasInCombat)
         {
+            Sfx.Play("combat_start", 0.7f, 0f, 0.5f);
             BeginPlayerRound();
         }
 
@@ -152,6 +153,7 @@ public class TurnManager : MonoBehaviour
 
     private void EndCombat()
     {
+        if (!IsGameOver) Sfx.Play("combat_end", 0.7f, 0f, 0.5f);
         Debug.Log("<color=green>Savaş bitti, Keşif Moduna dönüldü.</color>");
 
         if (enemyAlertUI != null) enemyAlertUI.SetActive(false);
@@ -298,6 +300,7 @@ public class TurnManager : MonoBehaviour
     {
         CurrentPlayerUnit = u;
         u.OnTurnStart();
+        if (u.isMainDrone && IsInCombat()) Sfx.Play("turn_start", 0.6f, 0f, 0.3f);
 
         if (CardManager.Instance != null)
         {
@@ -333,6 +336,7 @@ public class TurnManager : MonoBehaviour
 
     private void StartEnemyTurn()
     {
+        if (IsInCombat()) Sfx.Play("turn_end", 0.55f, 0f, 0.3f);
         CurrentState = TurnState.EnemyTurn;
         if (CardManager.Instance != null) CardManager.Instance.CancelTargeting();
         StartCoroutine(EnemyTurnRoutine());

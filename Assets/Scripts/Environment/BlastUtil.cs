@@ -9,6 +9,7 @@ public static class BlastUtil
         if (gm == null) return;
 
         TacticalCamera.Shake(0.28f, 0.32f);
+        Sfx.Play("explosion", 1f, 0.08f, 0.08f);
 
         List<Vector2Int> cells = new List<Vector2Int>();
         HashSet<Vector2Int> set = new HashSet<Vector2Int>();

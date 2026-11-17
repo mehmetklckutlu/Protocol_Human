@@ -111,6 +111,7 @@ public class ExplosiveBarrel : MonoBehaviour
         HidePreview();
 
         TacticalCamera.Shake(0.28f, 0.32f);
+        Sfx.Play("explosion", 1f, 0.08f, 0.08f);
 
         List<Vector2Int> cells = GetBlastCells();
         HashSet<Vector2Int> set = new HashSet<Vector2Int>(cells);

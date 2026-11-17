@@ -31,6 +31,9 @@ public class UnitMovement : MonoBehaviour
 
     private void Start()
     {
+        // Oyuncu drone'ları uçuyor: hareket ederken kısık motor uğultusu.
+        if (myUnit != null && myUnit.isPlayerOwned && GetComponent<DroneHoverSound>() == null)
+            gameObject.AddComponent<DroneHoverSound>();
         CurrentGridPosition = GridManager.Instance.GetGridPosition(transform.position);
         transform.position = GridManager.Instance.GetWorldPosition(CurrentGridPosition);
     }
@@ -39,6 +42,7 @@ public class UnitMovement : MonoBehaviour
     {
         if (TurnManager.Instance == null || GridManager.Instance == null || !myUnit.isPlayerOwned || myUnit.IsDead)
             return;
+        if (SettingsMenu.IsOpen) return; // Ayarlar açıkken haritaya tıklanmasın
 
         bool inCombat = TurnManager.Instance.IsInCombat();
         bool isCardTargeting = CardManager.Instance != null && CardManager.Instance.IsTargeting;

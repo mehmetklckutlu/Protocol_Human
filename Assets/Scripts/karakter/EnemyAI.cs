@@ -68,6 +68,7 @@ public class EnemyAI : MonoBehaviour
     private void WakeUp()
     {
         isAwake = true;
+        Sfx.Play("enemy_alert", 0.6f, 0.03f, 0.6f);
         Debug.Log($"<color=red>{gameObject.name} oyuncuyu FARK ETTİ!</color>");
 
         TurnManager.Instance.UpdateCombatState();

@@ -66,6 +66,7 @@ public class DroneUnit : MonoBehaviour
         {
             Debug.Log(name + " şarjı bitti, devre dışı kaldı.");
             FloatingText.Spawn(transform.position, "SARJ BITTI", Color.gray);
+            Sfx.Play("drone_shutdown", 0.7f);
             unit.Kill();
         }
     }

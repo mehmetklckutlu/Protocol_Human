@@ -240,13 +240,14 @@ public class CardManager : MonoBehaviour
 
         if (pendingCard == card && pendingIndex == handIndex)
         {
+            Sfx.Play("ui_click", 0.5f);
             CancelTargeting();
             NotifyHandChanged();
             return;
         }
 
         CancelTargeting();
-        if (!CanPlay(card)) { NotifyHandChanged(); return; }
+        if (!CanPlay(card)) { Sfx.Play("card_deny", 0.6f); NotifyHandChanged(); return; }
 
         switch (card.cardType)
         {
@@ -294,6 +295,7 @@ public class CardManager : MonoBehaviour
         if (unit == null) return;
 
         Pay(card, unit, handIndex);
+        Sfx.Play("card_play", 0.6f);
         Vector3 pos = unit.transform.position;
 
         if (card.cardType == CardType.Defense && !card.shield.IsZero) unit.AddShield(card.RollShield());
@@ -342,12 +344,14 @@ public class CardManager : MonoBehaviour
         if (targets.Count == 0 && barrels.Count == 0)
         {
             Debug.Log("Menzilde hedef yok!");
+            Sfx.Play("card_deny", 0.6f);
             NotifyHandChanged();
             return;
         }
 
         pendingCard = card;
         pendingIndex = handIndex;
+        Sfx.Play("card_select", 0.6f);
 
         List<Node> nodes = new List<Node>();
         foreach (Unit t in targets)
@@ -376,6 +380,8 @@ public class CardManager : MonoBehaviour
         }
 
         UpdateBarrelPreview();
+
+        if (SettingsMenu.IsOpen) return; // Ayarlar açıkken haritaya tıklanmasın
 
         if (Input.GetMouseButtonDown(1))
         {
@@ -420,6 +426,7 @@ public class CardManager : MonoBehaviour
         if (UnityEngine.Random.value > card.hitChance)
         {
             FloatingText.Spawn(pos, "ISKA", new Color(0.8f, 0.8f, 0.8f));
+            Sfx.Play("miss", 0.6f);
             return false;
         }
         return true;
@@ -444,6 +451,7 @@ public class CardManager : MonoBehaviour
             {
                 target.stunTurns = Mathf.Max(target.stunTurns, card.stunTurns);
                 FloatingText.Spawn(target.transform.position, "STUN!", new Color(1f, 0.9f, 0.3f), 1);
+                Sfx.Play("stun", 0.7f);
             }
             int dmg = card.RollDamage(out bool crit, out float roll01);
             target.TakeDamage(dmg, crit, roll01);
@@ -521,12 +529,14 @@ public class CardManager : MonoBehaviour
         if (spot == null)
         {
             Debug.Log("Drone çağıracak boş kare yok!");
+            Sfx.Play("card_deny", 0.6f);
             NotifyHandChanged();
             return;
         }
 
         Pay(card, caster, handIndex);
 
+        Sfx.Play("summon", 0.75f);
         GameObject go = Instantiate(card.summonPrefab, GridManager.Instance.GetWorldPosition(spot.Value), Quaternion.identity);
         Unit ally = go.GetComponent<Unit>();
         if (ally != null)

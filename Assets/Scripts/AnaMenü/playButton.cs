@@ -21,6 +21,7 @@ public class playButton : MonoBehaviour
     private Vector3 baseScale;
     private Color baseColor;
     private bool pressed;
+    private bool wasHover;
 
     private void Awake()
     {
@@ -34,7 +35,9 @@ public class playButton : MonoBehaviour
         if (cam == null) cam = Camera.main;
         if (cam == null) return;
 
-        bool hover = IsMouseOver();
+        bool hover = !SettingsMenu.IsOpen && IsMouseOver();
+        if (hover && !wasHover) Sfx.Play("ui_hover", 0.5f);
+        wasHover = hover;
 
         if (hover && Input.GetMouseButtonDown(0)) pressed = true;
 
@@ -61,6 +64,7 @@ public class playButton : MonoBehaviour
 
     private void Click()
     {
+        Sfx.Play("ui_click", 0.7f);
         if (buttonType == MenuButtonType.Oyna) PlayGame();
         else ExitGame();
     }

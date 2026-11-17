@@ -34,6 +34,12 @@ public class ScrapPile : MonoBehaviour
     private SpriteRenderer body;
     private Color baseColor = Color.white;
     private bool searching;
+    private AudioSource searchLoop;
+
+    private void OnDestroy()
+    {
+        if (searchLoop != null) Sfx.StopLoop(searchLoop, 0.1f);
+    }
     private bool ready;
 
     private void Awake()
@@ -84,7 +90,7 @@ public class ScrapPile : MonoBehaviour
             body.color = Color.Lerp(baseColor, highlightColor, pulse);
         }
 
-        if (hover && Input.GetMouseButtonDown(0))
+        if (hover && Input.GetMouseButtonDown(0) && !SettingsMenu.IsOpen)
         {
             if (CardManager.Instance != null && CardManager.Instance.BlocksMapInput) return;
             OnClicked();
@@ -178,6 +184,8 @@ public class ScrapPile : MonoBehaviour
     {
         searching = true;
         body.color = baseColor;
+        // Arama boyunca hurda karıştırma sesi döngüde çalar, arama bitince söner.
+        searchLoop = Sfx.StartLoop("scrap_search", 0.75f, 0.1f);
         TurnManager.Instance.SetBusy();
         ScrapUI ui = ScrapUI.Instance;
         ui.BeginSearch();
@@ -201,6 +209,9 @@ public class ScrapPile : MonoBehaviour
 
         int scrapAmount = scrap.Roll();
         ScrapInventory.Add(scrapAmount);
+        Sfx.StopLoop(searchLoop, 0.2f);
+        searchLoop = null;
+        Sfx.Play("scrap_found", 0.65f);
         string msg = "+" + scrapAmount + " hurda bulundu";
 
         if (blueprints.Count > 0 && CardManager.Instance != null && Random.value < blueprintChance)
