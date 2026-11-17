@@ -21776,15 +21776,17 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f1d6c1014a1645442936ec7e3df59eac, type: 2}
   randomPool:
   - card: {fileID: 11400000, guid: 69b07c09adeb62a4ab7c4e7d8707de53, type: 2}
-    weight: 30
-  - card: {fileID: 11400000, guid: 8a91f0a4534c55a4ea6b9a2de40e9ff6, type: 2}
-    weight: 18
-  - card: {fileID: 11400000, guid: ce20de8e9ee18a14abdfeb26a781a9bd, type: 2}
+    weight: 25
+  - card: {fileID: 11400000, guid: a798e41106505114891bc1c5600be8a4, type: 2}
     weight: 15
-  - card: {fileID: 11400000, guid: cc126da51dea0214babf1bfe82284d24, type: 2}
+  - card: {fileID: 11400000, guid: e2d2bad455e451e4a9bb3d31dc27940c, type: 2}
     weight: 15
-  - card: {fileID: 11400000, guid: f06b981966bfaef489cdd3f08d0d893e, type: 2}
+  - card: {fileID: 11400000, guid: 75661e14aa101cc41b2f560a51be3edd, type: 2}
     weight: 15
+  - card: {fileID: 11400000, guid: b7ad3f7f037102349a0307c9e07b47dc, type: 2}
+    weight: 12
+  - card: {fileID: 11400000, guid: de3dbaedeab24a34eb74bfbbc9478001, type: 2}
+    weight: 10
   - card: {fileID: 11400000, guid: 208a5d3920a003c448aa6692543998ec, type: 2}
     weight: 10
   maxHandSize: 9

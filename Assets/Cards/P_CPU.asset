@@ -17,7 +17,7 @@ MonoBehaviour:
   icon: {fileID: 8309096688390797820, guid: c9317bd7bc56a1b40ae6fb6d0ce4e765, type: 3}
   description: 
   cpuCost: 0
-  scrapCost: 4
+  scrapCost: 0
   damage:
     min: 0
     max: 0
@@ -33,7 +33,7 @@ MonoBehaviour:
   heal:
     min: 0
     max: 0
-  cpuRestore: 3
+  cpuRestore: 2
   chargeAll: 0
   selfDestruct: 0
   blastRadius: 2

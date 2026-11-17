@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 public enum TurnState { PlayerTurn, EnemyTurn, Busy }
 
@@ -18,6 +20,10 @@ public class TurnManager : MonoBehaviour
     public GameObject endTurnButton;
     public GameObject roundEndUI;
 
+    [Header("Kısayol")]
+    [Tooltip("Turu bitirmek için klavye kısayol tuşu.")]
+    public KeyCode endTurnHotkey = KeyCode.E;
+
     private readonly List<Unit> playerQueue = new List<Unit>();
     public Unit CurrentPlayerUnit { get; private set; }
 
@@ -29,6 +35,80 @@ public class TurnManager : MonoBehaviour
         Instance = this;
         // Sahnelerde Turu Bitir butonu atanmamışsa adından bul; savaş dışında gizlenebilsin.
         if (endTurnButton == null) endTurnButton = GameObject.Find("EndTurn_Button");
+        StyleEndTurnButton();
+        RuntimeArt.ApplyPixelFontToScene();
+
+        foreach (Unit u in FindObjectsByType<Unit>(FindObjectsSortMode.None))
+        {
+            if (u != null && !u.IsDead) RegisterUnit(u);
+        }
+    }
+
+    private void StyleEndTurnButton()
+    {
+        if (endTurnButton == null) return;
+
+        RectTransform rt = endTurnButton.GetComponent<RectTransform>();
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(1f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(1f, 0f);
+            rt.anchoredPosition = new Vector2(-24f, 24f);
+            rt.sizeDelta = new Vector2(236f, 68f);
+        }
+
+        Image img = endTurnButton.GetComponent<Image>();
+        if (img != null)
+        {
+            img.sprite = RuntimeArt.EndTurnButtonSprite;
+            img.type = Image.Type.Simple;
+            img.color = Color.white;
+        }
+
+        Button btn = endTurnButton.GetComponent<Button>();
+        if (btn != null)
+        {
+            ColorBlock cb = btn.colors;
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(0.72f, 1f, 1f, 1f);
+            cb.pressedColor = new Color(1f, 0.82f, 0.38f, 1f);
+            cb.selectedColor = Color.white;
+            cb.fadeDuration = 0.06f;
+            btn.colors = cb;
+        }
+
+        TMP_Text label = endTurnButton.GetComponentInChildren<TMP_Text>(true);
+        if (label != null)
+        {
+            RuntimeArt.ApplyPixelFont(label);
+            label.text = "TURU BİTİR >>\n<size=60%><color=#FFD264>[ E ]</color></size>";
+            label.fontSize = 22f;
+            label.fontStyle = FontStyles.Bold;
+            label.color = new Color(0.85f, 0.98f, 1f, 1f);
+            label.alignment = TextAlignmentOptions.Center;
+            label.lineSpacing = -8f;
+            label.raycastTarget = false;
+        }
+    }
+
+    private void Update()
+    {
+        if (CurrentState != TurnState.PlayerTurn || !IsInCombat() || IsGameOver) return;
+
+        if (Input.GetKeyDown(endTurnHotkey))
+        {
+            GameObject dialog = GameObject.Find("Dialog");
+            if (dialog != null && dialog.activeInHierarchy) return;
+
+            if (CurrentPlayerUnit != null)
+            {
+                UnitMovement move = CurrentPlayerUnit.GetComponent<UnitMovement>();
+                if (move != null && move.IsMoving) return;
+            }
+
+            EndPlayerTurn();
+        }
     }
 
     private void Start()

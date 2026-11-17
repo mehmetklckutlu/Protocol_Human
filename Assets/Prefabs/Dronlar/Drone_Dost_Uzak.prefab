@@ -370,8 +370,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   isPlayerOwned: 1
-  maxHealth: 35
-  currentHealth: 35
+  maxHealth: 50
+  currentHealth: 50
   maxMovement: 3
   currentMovement: 5
   maxCPU: 0
@@ -400,11 +400,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DroneUnit
   droneType: 1
   isAlly: 1
-  charge: 3
+  charge: 4
   kit:
   - {fileID: 11400000, guid: 94b7a46f94d2d5744a06c73bfb66c9d2, type: 2}
-  - {fileID: 11400000, guid: 5a0df5537f7f35a48951afde8d405410, type: 2}
-  - {fileID: 11400000, guid: 73f021f6e20e77e4c9b7987456e63569, type: 2}
+  - {fileID: 11400000, guid: f1d6c1014a1645442936ec7e3df59eac, type: 2}
+  - {fileID: 11400000, guid: 75661e14aa101cc41b2f560a51be3edd, type: 2}
   scrap:
     min: 2
     max: 4

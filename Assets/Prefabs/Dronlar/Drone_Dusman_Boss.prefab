@@ -493,8 +493,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   isPlayerOwned: 0
-  maxHealth: 130
-  currentHealth: 130
+  maxHealth: 110
+  currentHealth: 110
   maxMovement: 3
   currentMovement: 0
   maxCPU: 2
@@ -523,8 +523,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
   moveSpeed: 5
   attackDamage:
-    min: 16
-    max: 23
+    min: 12
+    max: 17
   attackRange: 1
   targetMode: 0
   visionRange: 15
@@ -551,14 +551,17 @@ MonoBehaviour:
   scrap:
     min: 6
     max: 10
-  cardDropChance: 0.6
+  cardDropChance: 0.65
   dropCards:
+  - {fileID: 11400000, guid: 69b07c09adeb62a4ab7c4e7d8707de53, type: 2}
   - {fileID: 11400000, guid: a798e41106505114891bc1c5600be8a4, type: 2}
+  - {fileID: 11400000, guid: e2d2bad455e451e4a9bb3d31dc27940c, type: 2}
+  - {fileID: 11400000, guid: 75661e14aa101cc41b2f560a51be3edd, type: 2}
   - {fileID: 11400000, guid: b7ad3f7f037102349a0307c9e07b47dc, type: 2}
   - {fileID: 11400000, guid: de3dbaedeab24a34eb74bfbbc9478001, type: 2}
-  - {fileID: 11400000, guid: 9a5caae89d40c9b4ba10eec44cedbc0a, type: 2}
+  - {fileID: 11400000, guid: 208a5d3920a003c448aa6692543998ec, type: 2}
   blueprint: {fileID: 11400000, guid: dee79491a5decb249a1a043cd2106bbd, type: 2}
-  blueprintChance: 0.35
+  blueprintChance: 0.4
 --- !u!95 &1389475650985021176
 Animator:
   serializedVersion: 7

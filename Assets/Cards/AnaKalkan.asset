@@ -27,8 +27,8 @@ MonoBehaviour:
   stunChance: 0
   stunTurns: 1
   shield:
-    min: 12
-    max: 18
+    min: 20
+    max: 28
   tauntTurns: 0
   heal:
     min: 0

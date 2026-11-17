@@ -195,6 +195,7 @@ public class ScrapUI : MonoBehaviour
         GameObject go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         TextMeshProUGUI t = go.AddComponent<TextMeshProUGUI>();
+        RuntimeArt.ApplyPixelFont(t);
         t.fontSize = size;
         t.alignment = align;
         t.color = Color.white;

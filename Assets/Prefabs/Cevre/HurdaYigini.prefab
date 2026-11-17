@@ -107,15 +107,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ScrapPile
   searchDuration: 3
   scrap:
-    min: 1
-    max: 4
-  blueprintChance: 0.1
+    min: 2
+    max: 5
+  blueprintChance: 0.15
   blueprints:
   - {fileID: 11400000, guid: c4d0f152999135548857c0b4652e42a1, type: 2}
   - {fileID: 11400000, guid: b97b65a1788affa46887990384d9e80b, type: 2}
   - {fileID: 11400000, guid: dee79491a5decb249a1a043cd2106bbd, type: 2}
-  repairCard: {fileID: 11400000, guid: 9a5caae89d40c9b4ba10eec44cedbc0a, type: 2}
-  repairChance: 0.3
   onlyOutOfCombat: 1
   highlightColor: {r: 0.55, g: 1, b: 0.6, a: 1}
   hoverColor: {r: 0.35, g: 1, b: 0.45, a: 1}

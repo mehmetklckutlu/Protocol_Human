@@ -89,6 +89,28 @@ public class GridManager : MonoBehaviour
         return gridPos.x >= 0 && gridPos.x < gridSize.x && gridPos.y >= 0 && gridPos.y < gridSize.y;
     }
 
+    public bool IsCellOccupied(Vector2Int cell, Unit ignoreUnit = null)
+    {
+        TurnManager tm = TurnManager.Instance;
+        if (tm == null) return false;
+
+        foreach (Unit u in tm.playerUnits)
+        {
+            if (u == null || u.IsDead || u == ignoreUnit) continue;
+            if (GetGridPosition(u.transform.position) == cell) return true;
+            UnitMovement move = u.GetComponent<UnitMovement>();
+            if (move != null && move.IsMoving && move.CurrentGridPosition == cell) return true;
+        }
+
+        foreach (Unit u in tm.enemyUnits)
+        {
+            if (u == null || u.IsDead || u == ignoreUnit) continue;
+            if (GetGridPosition(u.transform.position) == cell) return true;
+        }
+
+        return false;
+    }
+
     public List<Node> GetNeighbors(Node node, bool allowDiagonal = false)
     {
         List<Node> neighbors = new List<Node>();
@@ -139,7 +161,7 @@ public class GridManager : MonoBehaviour
             }
         }
     }
-    public List<Node> GetNodesInRange(Vector2Int startPos, int maxSteps, bool allowDiagonal = false)
+    public List<Node> GetNodesInRange(Vector2Int startPos, int maxSteps, bool allowDiagonal = false, Unit movingUnit = null)
     {
         List<Node> reachableNodes = new List<Node>();
         Dictionary<Node, int> costs = new Dictionary<Node, int>();
@@ -163,6 +185,7 @@ public class GridManager : MonoBehaviour
             foreach (Node neighbor in GetNeighbors(currentNode, allowDiagonal))
             {
                 if (!neighbor.isWalkable) continue;
+                if (IsCellOccupied(neighbor.gridPosition, movingUnit)) continue;
 
                 int newCost = currentCost + 1;
 

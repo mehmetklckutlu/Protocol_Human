@@ -119,6 +119,45 @@ public class EnemyAI : MonoBehaviour
         return tm.GetClosestPlayer(transform.position);
     }
 
+    private List<Node> FindPathToTarget(Vector2Int currentPos, Vector2Int targetPos)
+    {
+        List<Node> path = AStarPathfinding.FindPath(currentPos, targetPos, false, myUnit, allowOccupiedTarget: true);
+        if (path != null && path.Count > 0)
+        {
+            if (path[path.Count - 1].gridPosition == targetPos)
+                path.RemoveAt(path.Count - 1);
+            if (path.Count > 0)
+                return path;
+        }
+
+        // Hedefin etrafı başka dronlarla/duvarlarla tamamen kapandıysa ulaşılabilir en yakın boş kareye yürü
+        int currentDist = Dist(currentPos, targetPos);
+        List<Node> reachable = GridManager.Instance.GetNodesInRange(currentPos, 40, false, myUnit);
+        Node bestNode = null;
+        int bestTargetDist = currentDist;
+        int bestStepDist = int.MaxValue;
+
+        foreach (Node n in reachable)
+        {
+            if (n == null || n.gridPosition == currentPos) continue;
+            if (GridManager.Instance.IsCellOccupied(n.gridPosition, myUnit)) continue;
+
+            int td = Dist(n.gridPosition, targetPos);
+            int sd = Dist(currentPos, n.gridPosition);
+            if (td < bestTargetDist || (td == bestTargetDist && td < currentDist && sd < bestStepDist))
+            {
+                bestTargetDist = td;
+                bestStepDist = sd;
+                bestNode = n;
+            }
+        }
+
+        if (bestNode != null)
+            return AStarPathfinding.FindPath(currentPos, bestNode.gridPosition, false, myUnit, allowOccupiedTarget: false);
+
+        return null;
+    }
+
     public IEnumerator TakeTurnRoutine()
     {
         if (!isAwake) yield break;
@@ -155,6 +194,9 @@ public class EnemyAI : MonoBehaviour
             }
             else if (distanceToTarget > attackRange)
             {
+                List<Node> path = FindPathToTarget(currentPos, targetPos);
+                if (path == null || path.Count == 0) break;
+
                 if (myUnit.currentMovement <= 0)
                 {
                     Debug.Log($"<color=cyan>{gameObject.name} Dash yaptı (Hareket Yeniledi)!</color>");
@@ -167,15 +209,15 @@ public class EnemyAI : MonoBehaviour
                     hasMovedThisTurn = true;
                 }
 
-                List<Node> path = AStarPathfinding.FindPath(currentPos, targetPos, false);
-                if (path == null || path.Count == 0) break;
-
-                if (path[path.Count - 1].gridPosition == targetPos) path.RemoveAt(path.Count - 1);
                 if (path.Count > myUnit.currentMovement) path = path.GetRange(0, myUnit.currentMovement);
                 if (path.Count == 0) break;
 
+                int stepsMoved = 0;
                 foreach (Node node in path)
                 {
+                    if (GridManager.Instance.IsCellOccupied(node.gridPosition, myUnit))
+                        break;
+
                     Vector3 targetWorldPos = node.worldPosition;
                     while (Vector2.Distance(new Vector2(transform.position.x, transform.position.y), new Vector2(targetWorldPos.x, targetWorldPos.y)) > 0.01f)
                     {
@@ -188,9 +230,12 @@ public class EnemyAI : MonoBehaviour
                     transform.position = targetWorldPos;
                     currentPos = node.gridPosition;
                     myUnit.UseMovement(1);
+                    stepsMoved++;
 
                     if (target != null && Dist(currentPos, targetPos) <= attackRange) break;
                 }
+
+                if (stepsMoved == 0) break;
             }
             else
             {

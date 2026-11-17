@@ -50,6 +50,9 @@ public class CardManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        fixedCards.RemoveAll(c => c == null);
+        startingCards.RemoveAll(c => c == null);
+        randomPool.RemoveAll(w => w == null || w.card == null);
         Hand.AddRange(startingCards);
     }
 
@@ -120,7 +123,13 @@ public class CardManager : MonoBehaviour
     private int NonFixedCount()
     {
         int n = 0;
-        foreach (CardData c in Hand) if (c != null && !fixedCards.Contains(c)) n++;
+        var seenFixed = new HashSet<CardData>();
+        foreach (CardData c in Hand)
+        {
+            if (c == null) continue;
+            if (fixedCards.Contains(c) && seenFixed.Add(c)) continue;
+            n++;
+        }
         return n;
     }
 
@@ -204,10 +213,13 @@ public class CardManager : MonoBehaviour
         Unit unit = GetActiveUnit();
         if (unit == null) return false;
 
-        if (unit.usesCpu) { if (unit.currentCPU < card.cpuCost) return false; }
+        if (unit.usesCpu)
+        {
+            if (unit.currentCPU < card.cpuCost) return false;
+            if (card.scrapCost > ScrapInventory.Count) return false;
+        }
         else if (unit.cardsPlayedThisTurn >= unit.cardsPerTurn) return false;
 
-        if (card.scrapCost > ScrapInventory.Count) return false;
         if (card.cardType == CardType.Summon && card.summonPrefab == null) return false;
         // Ana drone kendini patlatırsa oyun biter; bu kart sadece dost drone'lar içindir.
         if (card.selfDestruct && unit.isMainDrone) return false;
@@ -258,9 +270,15 @@ public class CardManager : MonoBehaviour
     {
         bool fromMainHand = ReferenceEquals(CurrentHand, Hand);
 
-        if (card.scrapCost > 0) ScrapInventory.TrySpend(card.scrapCost);
-        if (unit.usesCpu) unit.UseCPU(card.cpuCost);
-        else unit.cardsPlayedThisTurn++;
+        if (unit.usesCpu)
+        {
+            if (card.scrapCost > 0) ScrapInventory.TrySpend(card.scrapCost);
+            unit.UseCPU(card.cpuCost);
+        }
+        else
+        {
+            unit.cardsPlayedThisTurn++;
+        }
 
         if (fromMainHand)
         {
@@ -279,8 +297,6 @@ public class CardManager : MonoBehaviour
         Vector3 pos = unit.transform.position;
 
         if (card.cardType == CardType.Defense && !card.shield.IsZero) unit.AddShield(card.RollShield());
-
-        if (!card.heal.IsZero) unit.Heal(card.heal.Roll());
 
         if (card.tauntTurns > 0)
         {
@@ -526,12 +542,7 @@ public class CardManager : MonoBehaviour
 
     private bool IsOccupied(Vector2Int cell)
     {
-        TurnManager tm = TurnManager.Instance;
-        foreach (Unit u in tm.playerUnits)
-            if (u != null && GridManager.Instance.GetGridPosition(u.transform.position) == cell) return true;
-        foreach (Unit u in tm.enemyUnits)
-            if (u != null && GridManager.Instance.GetGridPosition(u.transform.position) == cell) return true;
-        return false;
+        return GridManager.Instance != null && GridManager.Instance.IsCellOccupied(cell);
     }
 
     private List<ExplosiveBarrel> GetBarrelsInRange(CardData card)

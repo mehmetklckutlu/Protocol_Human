@@ -185,8 +185,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   isPlayerOwned: 1
-  maxHealth: 110
-  currentHealth: 110
+  maxHealth: 140
+  currentHealth: 140
   maxMovement: 3
   currentMovement: 5
   maxCPU: 0
@@ -217,9 +217,9 @@ MonoBehaviour:
   isAlly: 1
   charge: 5
   kit:
-  - {fileID: 11400000, guid: 98b896f8672490846927c628565248d1, type: 2}
-  - {fileID: 11400000, guid: e70f4951b8723d040b571ad4ef82df1f, type: 2}
-  - {fileID: 11400000, guid: c7dcfe2556681c24e9a3cb1314089088, type: 2}
+  - {fileID: 11400000, guid: a798e41106505114891bc1c5600be8a4, type: 2}
+  - {fileID: 11400000, guid: b7ad3f7f037102349a0307c9e07b47dc, type: 2}
+  - {fileID: 11400000, guid: de3dbaedeab24a34eb74bfbbc9478001, type: 2}
   scrap:
     min: 2
     max: 4

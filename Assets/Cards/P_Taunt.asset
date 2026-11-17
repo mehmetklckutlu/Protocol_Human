@@ -17,7 +17,7 @@ MonoBehaviour:
   icon: {fileID: 0}
   description: 
   cpuCost: 1
-  scrapCost: 2
+  scrapCost: 0
   damage:
     min: 0
     max: 0
@@ -27,8 +27,8 @@ MonoBehaviour:
   stunChance: 0
   stunTurns: 1
   shield:
-    min: 14
-    max: 20
+    min: 22
+    max: 30
   tauntTurns: 2
   heal:
     min: 0

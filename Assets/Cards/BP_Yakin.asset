@@ -16,8 +16,8 @@ MonoBehaviour:
   cardType: 2
   icon: {fileID: 21300000, guid: a1020000000000000000000000000001, type: 3}
   description: 
-  cpuCost: 3
-  scrapCost: 8
+  cpuCost: 2
+  scrapCost: 6
   damage:
     min: 0
     max: 0

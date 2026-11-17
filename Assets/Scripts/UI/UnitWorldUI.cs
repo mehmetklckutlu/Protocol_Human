@@ -166,6 +166,7 @@ public class UnitWorldUI : MonoBehaviour
         textRect.localScale = Vector3.one;
 
         TextMeshProUGUI tmp = textGo.GetComponent<TextMeshProUGUI>();
+        RuntimeArt.ApplyPixelFont(tmp);
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.fontSize = 13f;
         tmp.fontStyle = FontStyles.Bold;

@@ -76,6 +76,7 @@ public class DroneUnit : MonoBehaviour
         go.transform.SetParent(transform, false);
         go.transform.localPosition = new Vector3(0f, -0.62f, 0f);
         chargeLabel = go.AddComponent<TextMeshPro>();
+        RuntimeArt.ApplyPixelFont(chargeLabel);
         chargeLabel.fontSize = 3f;
         chargeLabel.fontStyle = FontStyles.Bold;
         chargeLabel.alignment = TextAlignmentOptions.Center;
@@ -96,6 +97,7 @@ public class DroneUnit : MonoBehaviour
 
         int scrapAmount = scrap.Roll();
 
+        dropCards.RemoveAll(c => c == null);
         List<CardData> cards = new List<CardData>();
         if (dropCards.Count > 0 && Random.value < cardDropChance)
         {

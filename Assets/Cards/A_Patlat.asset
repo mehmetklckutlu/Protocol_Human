@@ -38,6 +38,6 @@ MonoBehaviour:
   selfDestruct: 1
   blastRadius: 2
   blastDamage:
-    min: 35
-    max: 50
+    min: 40
+    max: 55
   summonPrefab: {fileID: 0}

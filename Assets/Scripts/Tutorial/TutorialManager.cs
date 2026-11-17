@@ -98,7 +98,7 @@ public class TutorialManager : MonoBehaviour
         if (scrapPiles.Count == 0) ScrapInventory.Add(3);
         yield return new WaitUntil(() => ScrapInventory.Count > startScrap || AnyPileGone());
         yield return new WaitForSeconds(1.6f);
-        yield return Dialog("Hurda toplama: <color=#7CFF8A>DOĞRULANDI</color>.\n\nBulduğun hurda envanterine eklendi. Bazı güçlü kartlar ve blueprint'ler oynanırken hurda harcar; topladıkça elini güçlendirirsin.");
+        yield return Dialog("Hurda toplama: <color=#7CFF8A>DOĞRULANDI</color>.\n\nBulduğun hurda envanterine eklendi. Blueprint (dost drone çağırma) kartları oynanırken hurda harcar; topladıkça yanına destek drone'lar çağırabilirsin.");
         OpenGate(1);
 
         // ---- TEST 3: İLK SAVAŞ
@@ -401,21 +401,30 @@ public class TutorialManager : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        // Görev kutusu (üst orta)
+        // Görev kutusu (sağ üst — üst ortadaki tur sırası çubuğuyla çakışmasın)
         objectiveRoot = MakePanel(cgo.transform, "Objective", new Color(0.02f, 0.08f, 0.12f, 0.88f));
         RectTransform or = objectiveRoot.GetComponent<RectTransform>();
-        or.anchorMin = or.anchorMax = new Vector2(0.5f, 1f);
-        or.pivot = new Vector2(0.5f, 1f);
-        or.anchoredPosition = new Vector2(0f, -24f);
-        or.sizeDelta = new Vector2(760f, 104f);
+        or.anchorMin = or.anchorMax = new Vector2(1f, 1f);
+        or.pivot = new Vector2(1f, 1f);
+        or.anchoredPosition = new Vector2(-24f, -20f);
+        or.sizeDelta = new Vector2(540f, 104f);
         AddOutline(objectiveRoot, Cyan);
         objectiveRoot.GetComponent<Image>().raycastTarget = false;
-        objectiveTitle = MakeText(objectiveRoot.transform, "Title", "", 24, Cyan, TextAlignmentOptions.Left);
-        Place(objectiveTitle.rectTransform, new Vector2(0f, 22f), new Vector2(720f, 36f));
+        objectiveTitle = MakeText(objectiveRoot.transform, "Title", "", 22, Cyan, TextAlignmentOptions.Left);
+        Place(objectiveTitle.rectTransform, new Vector2(0f, 22f), new Vector2(500f, 36f));
         objectiveTitle.fontStyle = FontStyles.Bold;
-        objectiveText = MakeText(objectiveRoot.transform, "Text", "", 26, Color.white, TextAlignmentOptions.Left);
-        Place(objectiveText.rectTransform, new Vector2(0f, -18f), new Vector2(720f, 44f));
+        objectiveText = MakeText(objectiveRoot.transform, "Text", "", 23, Color.white, TextAlignmentOptions.Left);
+        Place(objectiveText.rectTransform, new Vector2(0f, -18f), new Vector2(500f, 44f));
         objectiveRoot.SetActive(false);
+
+        // Sağ üstte her zaman erişilebilir "Eğitimi Geç" butonu
+        Button skipCornerBtn = MakeButton(cgo.transform, "EĞİTİMİ GEÇ >>", Vector2.zero, new Vector2(220f, 48f), out TextMeshProUGUI skipCornerLabel);
+        skipCornerLabel.fontSize = 20f;
+        RectTransform scr = skipCornerBtn.GetComponent<RectTransform>();
+        scr.anchorMin = scr.anchorMax = new Vector2(1f, 1f);
+        scr.pivot = new Vector2(1f, 1f);
+        scr.anchoredPosition = new Vector2(-24f, -134f);
+        skipCornerBtn.onClick.AddListener(StartMission);
 
         // Diyalog (ekranı karartır, haritaya tıklamayı engeller)
         dialogRoot = MakePanel(cgo.transform, "Dialog", new Color(0f, 0f, 0f, 0.45f));
@@ -424,7 +433,7 @@ public class TutorialManager : MonoBehaviour
         GameObject box = MakePanel(dialogRoot.transform, "Box", new Color(0.03f, 0.1f, 0.14f, 0.96f));
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = new Vector2(0.5f, 0.5f);
-        br.anchoredPosition = new Vector2(0f, 60f);
+        br.anchoredPosition = new Vector2(0f, -10f);
         br.sizeDelta = new Vector2(1080f, 380f);
         AddOutline(box, Cyan);
 
@@ -441,6 +450,10 @@ public class TutorialManager : MonoBehaviour
 
         dialogBody = MakeText(box.transform, "Body", "", 27, Color.white, TextAlignmentOptions.TopLeft);
         Place(dialogBody.rectTransform, new Vector2(95f, 10f), new Vector2(820f, 230f));
+
+        Button skipDialogBtn = MakeButton(box.transform, "EĞİTİMİ GEÇ", new Vector2(-140f, -145f), new Vector2(250f, 64f), out TextMeshProUGUI skipDialogLabel);
+        skipDialogLabel.color = new Color(1f, 0.82f, 0.45f);
+        skipDialogBtn.onClick.AddListener(StartMission);
 
         Button next = MakeButton(box.transform, "DEVAM >>", new Vector2(370f, -145f), new Vector2(250f, 64f), out dialogButtonLabel);
         next.onClick.AddListener(() => continuePressed = true);
@@ -487,6 +500,7 @@ public class TutorialManager : MonoBehaviour
         GameObject go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         TextMeshProUGUI t = go.AddComponent<TextMeshProUGUI>();
+        RuntimeArt.ApplyPixelFont(t);
         t.text = text;
         t.fontSize = size;
         t.color = color;

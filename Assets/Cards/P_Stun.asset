@@ -17,10 +17,10 @@ MonoBehaviour:
   icon: {fileID: 0}
   description: 
   cpuCost: 1
-  scrapCost: 3
+  scrapCost: 0
   damage:
-    min: 8
-    max: 12
+    min: 12
+    max: 16
   range: 1
   hitChance: 1
   critChance: 0.1

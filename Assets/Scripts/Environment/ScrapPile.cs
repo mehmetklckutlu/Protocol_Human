@@ -14,10 +14,6 @@ public class ScrapPile : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float blueprintChance = 0.1f;
     [Tooltip("Bulunabilecek blueprint kartları (rastgele biri seçilir).")]
     [SerializeField] private List<CardData> blueprints = new List<CardData>();
-    [Tooltip("Araştırmada bulunabilecek tamir kartı (can yeniler).")]
-    [SerializeField] private CardData repairCard;
-    [Tooltip("Tamir kartı bulma ihtimali (0.3 = %30).")]
-    [SerializeField, Range(0f, 1f)] private float repairChance = 0.3f;
     [Tooltip("Açık: sadece savaş dışında araştırılabilir.")]
     [SerializeField] private bool onlyOutOfCombat = true;
 
@@ -212,9 +208,6 @@ public class ScrapPile : MonoBehaviour
             CardData bp = blueprints[Random.Range(0, blueprints.Count)];
             if (bp != null) msg += GiveOrDrop(bp, true);
         }
-
-        if (repairCard != null && CardManager.Instance != null && Random.value < repairChance)
-            msg += GiveOrDrop(repairCard, false);
 
         Node n = gm.GetNode(PileCell);
         if (n != null) n.isWalkable = true;

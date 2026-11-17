@@ -6,12 +6,17 @@ public static class AStarPathfinding
     private const int MOVE_STRAIGHT_COST = 10;
     private const int MOVE_DIAGONAL_COST = 14;
 
-    public static List<Node> FindPath(Vector2Int startPos, Vector2Int targetPos, bool allowDiagonal = false)
+    public static List<Node> FindPath(Vector2Int startPos, Vector2Int targetPos, bool allowDiagonal = false, Unit movingUnit = null, bool allowOccupiedTarget = false)
     {
         Node startNode = GridManager.Instance.GetNode(startPos);
         Node targetNode = GridManager.Instance.GetNode(targetPos);
 
         if (startNode == null || targetNode == null || !targetNode.isWalkable)
+        {
+            return null;
+        }
+
+        if (!allowOccupiedTarget && GridManager.Instance.IsCellOccupied(targetPos, movingUnit))
         {
             return null;
         }
@@ -46,6 +51,12 @@ public static class AStarPathfinding
             {
                 if (!neighbor.isWalkable || closedSet.Contains(neighbor))
                     continue;
+
+                if (neighbor != targetNode || !allowOccupiedTarget)
+                {
+                    if (GridManager.Instance.IsCellOccupied(neighbor.gridPosition, movingUnit))
+                        continue;
+                }
 
                 int newMovementCostToNeighbor = currentNode.gCost + CalculateDistanceCost(currentNode, neighbor, allowDiagonal);
                 if (newMovementCostToNeighbor < neighbor.gCost || !openSet.Contains(neighbor))

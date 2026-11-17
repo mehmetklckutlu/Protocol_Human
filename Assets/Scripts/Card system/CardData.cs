@@ -39,8 +39,6 @@ public class CardData : ScriptableObject
     [Min(0)] public int tauntTurns = 0;
 
     [Header("Özel Kart (Utility)")]
-    [Tooltip("Kartı oynayan birimin canını bu aralıktan rastgele yeniler (en fazla Max HP'ye kadar).")]
-    public IntRange heal = 0;
     [Tooltip("Ana drone'un CPU'sunu bu kadar yeniler.")]
     [Min(0)] public int cpuRestore = 0;
     [Tooltip("Tüm dost drone'ların şarjını bu kadar tur uzatır.")]
@@ -60,7 +58,6 @@ public class CardData : ScriptableObject
         damage = new IntRange(Mathf.Max(0, damage.min), damage.max);
         shield = new IntRange(Mathf.Max(0, shield.min), shield.max);
         blastDamage = new IntRange(Mathf.Max(0, blastDamage.min), blastDamage.max);
-        heal = new IntRange(Mathf.Max(0, heal.min), heal.max);
     }
 
     /// <summary>
@@ -89,7 +86,6 @@ public class CardData : ScriptableObject
                 case CardType.Defense: return shield.IsZero ? "" : shield.ToString();
                 case CardType.Utility:
                     if (selfDestruct) return blastDamage.ToString();
-                    if (!heal.IsZero) return heal.ToString();
                     if (cpuRestore > 0) return "+" + cpuRestore;
                     if (chargeAll > 0) return "+" + chargeAll;
                     return "";
@@ -106,23 +102,30 @@ public class CardData : ScriptableObject
         switch (cardType)
         {
             case CardType.Attack:
-                text = $"{damage} hasar, menzil {range}";
-                if (hitChance < 1f) text += $"\n%{Mathf.RoundToInt(hitChance * 100)} isabet";
-                if (stunChance > 0f) text += $"\n%{Mathf.RoundToInt(stunChance * 100)} stun";
-                if (critChance > 0f) text += $"\n%{Mathf.RoundToInt(critChance * 100)} kritik";
+                text = $"<b>{damage} Hasar</b> · Menzil {range}";
+                if (hitChance < 1f) text += $"\n%{Mathf.RoundToInt(hitChance * 100)} İsabet";
+                if (stunChance > 0f) text += $"\n%{Mathf.RoundToInt(stunChance * 100)} Stun ({stunTurns} Tur)";
+                if (critChance > 0f) text += $"\n%{Mathf.RoundToInt(critChance * 100)} Kritik";
                 break;
             case CardType.Defense:
-                text = $"{shield} kalkan";
-                if (tauntTurns > 0) text += $"\nTaunt {tauntTurns} tur";
+                text = $"<b>{shield} Kalkan</b>";
+                if (tauntTurns > 0) text += $"\n{tauntTurns} Tur Taunt (Hedef Çeker)";
+                else text += "\nHasarı canından önce emer";
                 break;
             case CardType.Utility:
-                if (selfDestruct) text = $"Kendini patlat\nAlan {blastRadius}, {blastDamage} hasar";
-                else if (!heal.IsZero) text = $"{heal} can tamir eder";
-                else if (cpuRestore > 0) text = $"+{cpuRestore} CPU";
-                else if (chargeAll > 0) text = $"Dronelara +{chargeAll} şarj";
+                if (selfDestruct) text = $"Kendini imha eder\nAlan {blastRadius} · <b>{blastDamage} Hasar</b>";
+                else if (cpuRestore > 0) text = $"Ana drone'a\n<b>+{cpuRestore} CPU</b> kazandırır";
+                else if (chargeAll > 0) text = $"Dost dronelara\n<b>+{chargeAll} Tur Şarj</b> verir";
                 break;
             case CardType.Summon:
-                text = "Drone çağırır";
+                if (summonPrefab != null)
+                {
+                    Unit u = summonPrefab.GetComponent<Unit>();
+                    DroneUnit d = summonPrefab.GetComponent<DroneUnit>();
+                    if (u != null && d != null)
+                        return $"Dost drone çağırır\n<b>{u.maxHealth} Can · {d.charge} Tur Şarj</b>";
+                }
+                text = "Dost drone çağırır";
                 break;
         }
         return text;

@@ -101,7 +101,7 @@ public class UnitMovement : MonoBehaviour
             Node clickedNode = GridManager.Instance.GetNode(clickedGridPos);
             if (clickedNode != null && reachableNodes.Contains(clickedNode))
             {
-                List<Node> path = AStarPathfinding.FindPath(CurrentGridPosition, clickedGridPos, allowDiagonalMovement);
+                List<Node> path = AStarPathfinding.FindPath(CurrentGridPosition, clickedGridPos, allowDiagonalMovement, myUnit);
                 if (path != null && path.Count > 0 && path.Count <= myUnit.currentMovement)
                 {
                     if (HighlightManager.Instance != null) HighlightManager.Instance.ClearHighlights();
@@ -115,7 +115,7 @@ public class UnitMovement : MonoBehaviour
 
     private void RefreshCombatRange()
     {
-        List<Node> raw = GridManager.Instance.GetNodesInRange(CurrentGridPosition, myUnit.currentMovement, allowDiagonalMovement);
+        List<Node> raw = GridManager.Instance.GetNodesInRange(CurrentGridPosition, myUnit.currentMovement, allowDiagonalMovement, myUnit);
         reachableNodes.Clear();
         foreach (Node n in raw)
         {
@@ -171,7 +171,7 @@ public class UnitMovement : MonoBehaviour
 
             if (isMoving)
             {
-                List<Node> redirect = AStarPathfinding.FindPath(CurrentGridPosition, clickedGridPos, allowDiagonalMovement);
+                List<Node> redirect = AStarPathfinding.FindPath(CurrentGridPosition, clickedGridPos, allowDiagonalMovement, myUnit);
                 if (redirect != null && redirect.Count > 0)
                 {
                     pendingRedirectPath = redirect;
@@ -180,7 +180,7 @@ public class UnitMovement : MonoBehaviour
                 return;
             }
 
-            List<Node> path = AStarPathfinding.FindPath(CurrentGridPosition, clickedGridPos, allowDiagonalMovement);
+            List<Node> path = AStarPathfinding.FindPath(CurrentGridPosition, clickedGridPos, allowDiagonalMovement, myUnit);
             if (path != null && path.Count > 0)
             {
                 moveCoroutine = StartCoroutine(MoveAlongPath(path, false, null));
@@ -213,7 +213,7 @@ public class UnitMovement : MonoBehaviour
                 Node node = GridManager.Instance.GetNode(c);
                 if (node == null || !node.isWalkable || IsOccupiedByOtherUnit(c)) continue;
 
-                List<Node> path = AStarPathfinding.FindPath(CurrentGridPosition, c, allowDiagonalMovement);
+                List<Node> path = AStarPathfinding.FindPath(CurrentGridPosition, c, allowDiagonalMovement, myUnit);
                 if (path == null || path.Count == 0) continue;
                 if (inCombat && path.Count > myUnit.currentMovement) continue;
                 if (best == null || path.Count < best.Count) best = path;
@@ -242,12 +242,7 @@ public class UnitMovement : MonoBehaviour
 
     private bool IsOccupiedByOtherUnit(Vector2Int cell)
     {
-        TurnManager tm = TurnManager.Instance;
-        foreach (Unit u in tm.playerUnits)
-            if (u != null && u != myUnit && GridManager.Instance.GetGridPosition(u.transform.position) == cell) return true;
-        foreach (Unit u in tm.enemyUnits)
-            if (u != null && GridManager.Instance.GetGridPosition(u.transform.position) == cell) return true;
-        return false;
+        return GridManager.Instance != null && GridManager.Instance.IsCellOccupied(cell, myUnit);
     }
 
     private IEnumerator MoveAlongPath(List<Node> path, bool combatMove, System.Action onArrive)
@@ -265,6 +260,13 @@ public class UnitMovement : MonoBehaviour
         while (i < path.Count)
         {
             Node node = path[i];
+            if (GridManager.Instance.IsCellOccupied(node.gridPosition, myUnit))
+            {
+                pendingArrivalAction = null;
+                break;
+            }
+
+            CurrentGridPosition = node.gridPosition;
             Vector3 targetWorldPos = node.worldPosition;
 
             while (Vector2.Distance(new Vector2(transform.position.x, transform.position.y), new Vector2(targetWorldPos.x, targetWorldPos.y)) > 0.01f)

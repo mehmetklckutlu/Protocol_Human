@@ -19,8 +19,8 @@ MonoBehaviour:
   cpuCost: 1
   scrapCost: 0
   damage:
-    min: 10
-    max: 15
+    min: 13
+    max: 18
   range: 6
   hitChance: 1
   critChance: 0.1

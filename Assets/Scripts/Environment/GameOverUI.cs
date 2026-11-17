@@ -84,6 +84,7 @@ public static class GameOverUI
         tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one;
         tr.offsetMin = Vector2.zero; tr.offsetMax = Vector2.zero;
         TextMeshProUGUI t = textGo.AddComponent<TextMeshProUGUI>();
+        RuntimeArt.ApplyPixelFont(t);
         t.text = label;
         t.fontSize = 44;
         t.fontStyle = FontStyles.Bold;
@@ -101,6 +102,7 @@ public static class GameOverUI
         rt.sizeDelta = new Vector2(1600f, 200f);
         rt.anchoredPosition = new Vector2(0f, y);
         TextMeshProUGUI t = go.AddComponent<TextMeshProUGUI>();
+        RuntimeArt.ApplyPixelFont(t);
         t.text = text;
         t.fontSize = size;
         t.alignment = TextAlignmentOptions.Center;

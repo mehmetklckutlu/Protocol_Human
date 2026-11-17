@@ -8,7 +8,7 @@ public class Unit : MonoBehaviour
     public bool isPlayerOwned = true;
 
     [Header("Sağlık (HP)")]
-    public int maxHealth = 120;
+    public int maxHealth = 160;
     public int currentHealth;
 
     [Header("Hareket (Movement)")]
@@ -16,10 +16,10 @@ public class Unit : MonoBehaviour
     public int currentMovement;
 
     [Header("Aksiyon (CPU)")]
-    public int maxCPU = 4;
+    public int maxCPU = 6;
     public int currentCPU;
     [Tooltip("Savaşta her tur başında kazanılan CPU (en fazla Max CPU'ya kadar). Savaş dışında CPU tamamen dolar.")]
-    [Min(0)] public int cpuPerTurn = 2;
+    [Min(0)] public int cpuPerTurn = 3;
 
     [Header("Kalkan")]
     public int currentShield;
@@ -49,16 +49,29 @@ public class Unit : MonoBehaviour
 
     private Coroutine hitFlashCoroutine;
     private SpriteRenderer mainSpriteRenderer;
+    private Sprite initialSprite;
     private Color baseSpriteColor = Color.white;
     private Vector3 baseLocalScale = Vector3.one;
 
+    public Sprite PortraitSprite => initialSprite != null ? initialSprite : (mainSpriteRenderer != null ? mainSpriteRenderer.sprite : null);
+
     private void Awake()
     {
+        if (isMainDrone)
+        {
+            maxHealth = 160;
+            maxCPU = 6;
+            cpuPerTurn = 3;
+        }
         currentHealth = maxHealth;
         if (animator == null) animator = AnimUtil.Find(this);
         mainSpriteRenderer = GetComponent<SpriteRenderer>();
         if (mainSpriteRenderer == null) mainSpriteRenderer = GetComponentInChildren<SpriteRenderer>();
-        if (mainSpriteRenderer != null) baseSpriteColor = mainSpriteRenderer.color;
+        if (mainSpriteRenderer != null)
+        {
+            baseSpriteColor = mainSpriteRenderer.color;
+            initialSprite = mainSpriteRenderer.sprite;
+        }
         baseLocalScale = transform.localScale;
     }
 
@@ -93,15 +106,6 @@ public class Unit : MonoBehaviour
         if (amount <= 0) return;
         currentShield += amount;
         DamageNumber.SpawnShieldGain(transform.position, amount);
-        NotifyUI();
-    }
-
-    public void Heal(int amount)
-    {
-        if (dead || amount <= 0) return;
-        int healed = Mathf.Min(amount, maxHealth - currentHealth);
-        currentHealth += healed;
-        DamageNumber.SpawnHeal(transform.position, healed);
         NotifyUI();
     }
 

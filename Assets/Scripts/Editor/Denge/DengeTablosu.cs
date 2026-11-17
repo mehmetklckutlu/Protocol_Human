@@ -19,75 +19,59 @@ public static class DengeTablosu
     public static readonly string[] LevelScenes = { "Assets/Scenes/Buyuk Level.unity", "Assets/Scenes/örnek level.unity" };
 
     // ───────────────────────── ANA DRONE ─────────────────────────
-    public const int MainHP = 120;
+    public const int MainHP = 160;
     public const int MainMove = 5;
     public const int MainMaxCPU = 6;
-    public const int MainCpuPerTurn = 2;
+    public const int MainCpuPerTurn = 3;
 
     // ───────────────────────── KARTLAR ─────────────────────────
-    // Sabit kartlar = ana drone'a her tur gelir (birikmez)
-    // Rastgele havuz = savaşta her tur 1 tane çekilir, oynanmazsa elde birikir (bedelsiz)
-    // A_*  = dost drone kitleri (CPU yok, turda 1 kart, oynayınca sıra geçer)
-    // P_*  = yerden/düşmandan bulunan tek kullanımlık kartlar (hurda ister)
-    // BP_* = blueprint (dost drone çağırır)
+    // Oyundaki her kart tek bir asset olarak tanımlanır ve hem ana drone (sabit / rastgele havuz / ganimet)
+    // hem de dost drone kitleri tarafından ortak kullanılır.
     public static readonly CardSpec[] Cards =
     {
-        // Ana drone sabit kartlar
-        Atk("YakinSaldiri", "Yakın Saldırı",       cpu: 1, scrap: 0, dmg: R(18, 26), range: 1),
-        Atk("UzakSaldiri",  "Uzak Saldırı",        cpu: 1, scrap: 0, dmg: R(10, 15), range: 6),
+        // Sabit kartlar (ana drone'a her tur gelir, dost dronelar da kullanır)
+        Atk("YakinSaldiri", "Yakın Saldırı",       cpu: 1, scrap: 0, dmg: R(22, 30), range: 1),
+        Atk("UzakSaldiri",  "Uzak Saldırı",        cpu: 1, scrap: 0, dmg: R(13, 18), range: 6),
 
-        // Ana drone rastgele havuz kartları
-        Def("AnaKalkan",    "Kalkan",              cpu: 1, scrap: 0, shield: R(12, 18)),
+        // Ortak Kart Havuzu (hem her tur başında rastgele çekilen hem de düşmandan düşen kartlar — sadece CPU harcar)
+        Def("AnaKalkan",    "Kalkan",              cpu: 1, scrap: 0, shield: R(20, 28)),
+        Atk("P_Guclu",      "Güçlü Yakın Saldırı", cpu: 2, scrap: 0, dmg: R(36, 46), range: 1),
+        Atk("P_Stun",       "Stun Saldırısı",      cpu: 1, scrap: 0, dmg: R(12, 16), range: 1, stun: 0.75f),
+        Atk("P_Uzak2x",     "Riskli Uzak Saldırı", cpu: 2, scrap: 0, dmg: R(28, 38), range: 6, hit: 0.65f),
+        Def("P_Taunt",      "Taunt",               cpu: 1, scrap: 0, shield: R(22, 30), taunt: 2),
+        Util("P_CPU",       "CPU Yenile",          cpu: 0, scrap: 0, c => c.cpuRestore = 2),
         Util("Sarj",        "Şarj",                cpu: 1, scrap: 0, c => c.chargeAll = 1),
-        Atk("R_AgirDarbe",  "Ağır Darbe",          cpu: 2, scrap: 0, dmg: R(28, 38), range: 1),
-        Atk("R_SokAtisi",   "Şok Atışı",           cpu: 1, scrap: 0, dmg: R(6, 10),  range: 3, stun: 0.6f),
-        Atk("R_DeliciAtis", "Delici Atış",         cpu: 2, scrap: 0, dmg: R(18, 24), range: 6),
-        Util("R_HizliTamir","Hızlı Tamir",         cpu: 1, scrap: 0, c => c.heal = R(14, 20)),
 
-        // Dost drone kitleri
-        Atk("A_Yakin",  "Yakın Saldırı",           cpu: 0, scrap: 0, dmg: R(16, 22), range: 1),
-        Atk("A_Stun",   "Stun Saldırısı",          cpu: 0, scrap: 0, dmg: R(6, 10),  range: 1, stun: 0.7f),
-        Def("A_Kalkan", "Kalkan",                  cpu: 0, scrap: 0, shield: R(12, 18)),
-        Atk("A_Uzak",   "Uzak Saldırı",            cpu: 0, scrap: 0, dmg: R(10, 14), range: 5),
-        Atk("A_Uzak2x", "Riskli Uzak Saldırı",     cpu: 0, scrap: 0, dmg: R(24, 34), range: 5, hit: 0.5f),
-        Util("A_Patlat","Kendini Patlat",          cpu: 0, scrap: 0, c => { c.selfDestruct = true; c.blastRadius = 2; c.blastDamage = R(35, 50); }),
-        Atk("A_Guclu",  "Güçlü Yakın Saldırı",     cpu: 0, scrap: 0, dmg: R(30, 40), range: 1),
-        Def("A_Taunt",  "Taunt",                   cpu: 0, scrap: 0, shield: R(15, 22), taunt: 2),
-        Util("A_CPU",   "CPU Yenile",              cpu: 0, scrap: 0, c => c.cpuRestore = 2),
-
-        // Bulunan kartlar (tek kullanımlık)
-        Atk("P_Yakin",  "Yakın Saldırı",           cpu: 1, scrap: 2, dmg: R(20, 28), range: 1),
-        Atk("P_Guclu",  "Güçlü Yakın Saldırı",     cpu: 1, scrap: 5, dmg: R(34, 46), range: 1),
-        Atk("P_Stun",   "Stun Saldırısı",          cpu: 1, scrap: 3, dmg: R(8, 12),  range: 1, stun: 0.75f),
-        Atk("P_Uzak",   "Uzak Saldırı",            cpu: 1, scrap: 2, dmg: R(12, 18), range: 6),
-        Atk("P_Uzak2x", "Riskli Uzak Saldırı",     cpu: 1, scrap: 4, dmg: R(28, 40), range: 6, hit: 0.55f),
-        Def("P_Kalkan", "Kalkan",                  cpu: 1, scrap: 2, shield: R(20, 28)),
-        Def("P_Taunt",  "Taunt",                   cpu: 1, scrap: 2, shield: R(14, 20), taunt: 2),
-        Util("P_CPU",   "CPU Yenile",              cpu: 0, scrap: 4, c => c.cpuRestore = 3),
-        Util("P_Patlat","Kendini Patlat",          cpu: 1, scrap: 10, c => { c.selfDestruct = true; c.blastRadius = 2; c.blastDamage = R(35, 50); }),
-        Util("P_Tamir", "Tamir Kiti",              cpu: 1, scrap: 3, c => c.heal = R(25, 35)),
+        // Sadece dost uzak drone'un kullandığı kendini imha kartı
+        Util("A_Patlat",    "Kendini Patlat",      cpu: 0, scrap: 0, c => { c.selfDestruct = true; c.blastRadius = 2; c.blastDamage = R(40, 55); }),
 
         // Blueprint'ler (CPU + hurda)
-        Summon("BP_Yakin", "Blueprint: Yakın Drone", cpu: 3, scrap: 8,  prefab: "Drone_Dost_Yakin"),
-        Summon("BP_Uzak",  "Blueprint: Uzak Drone",  cpu: 3, scrap: 8,  prefab: "Drone_Dost_Uzak"),
-        Summon("BP_Boss",  "Blueprint: Boss Drone",  cpu: 5, scrap: 15, prefab: "Drone_Dost_Boss"),
+        Summon("BP_Yakin", "Blueprint: Yakın Drone", cpu: 2, scrap: 6,  prefab: "Drone_Dost_Yakin"),
+        Summon("BP_Uzak",  "Blueprint: Uzak Drone",  cpu: 2, scrap: 6,  prefab: "Drone_Dost_Uzak"),
+        Summon("BP_Boss",  "Blueprint: Boss Drone",  cpu: 3, scrap: 10, prefab: "Drone_Dost_Boss"),
     };
 
     /// <summary>Saldırı kartlarının varsayılan kritik şansı (kritik = x1.5 hasar).</summary>
     public const float CritChance = 0.1f;
 
-    // ───────────────────────── EL / DESTE ─────────────────────────
+    // ───────────────────────── EL / DESTE / HAVUZ ─────────────────────────
     public static readonly string[] FixedCards = { "YakinSaldiri", "UzakSaldiri" };
 
-    /// <summary>Rastgele kart havuzu: (kart, ağırlık). Ağırlık büyüdükçe daha sık gelir.</summary>
+    /// <summary>Ortak kart havuzu: hem savaşta her tur başında çekilen hem de düşman öldüğünde düşen havuz.</summary>
     public static readonly (string card, int weight)[] RandomPool =
     {
-        ("AnaKalkan",     30),
-        ("R_AgirDarbe",   18),
-        ("R_SokAtisi",    15),
-        ("R_DeliciAtis",  15),
-        ("R_HizliTamir",  15),
-        ("Sarj",          10),
+        ("AnaKalkan", 25),
+        ("P_Guclu",   15),
+        ("P_Stun",    15),
+        ("P_Uzak2x",  15),
+        ("P_Taunt",   12),
+        ("P_CPU",     10),
+        ("Sarj",      10),
+    };
+
+    public static readonly string[] SharedDropPool =
+    {
+        "AnaKalkan", "P_Guclu", "P_Stun", "P_Uzak2x", "P_Taunt", "P_CPU", "Sarj"
     };
 
     public const int MaxHandSize = 9;
@@ -95,28 +79,26 @@ public static class DengeTablosu
     // ───────────────────────── DRONE'LAR ─────────────────────────
     public static readonly DroneSpec[] Drones =
     {
-        // Düşmanlar
-        new DroneSpec("Drone_Dusman_Yakin") { hp = 60,  move = 4, damage = R(11, 16), range = 1, target = EnemyTargetMode.Nearest,
-            scrap = R(2, 4), cardDrop = 0.30f, blueprintDrop = 0.12f, drops = new[] { "P_Yakin", "P_Stun", "P_Kalkan", "P_Tamir" } },
-        new DroneSpec("Drone_Dusman_Uzak")  { hp = 40,  move = 3, damage = R(9, 13),  range = 4, target = EnemyTargetMode.LowestHealth,
-            scrap = R(2, 4), cardDrop = 0.35f, blueprintDrop = 0.15f, drops = new[] { "P_Uzak", "P_Uzak2x", "P_Tamir" } },
-        new DroneSpec("Drone_Dusman_Boss")  { hp = 130, move = 3, damage = R(16, 23), range = 1, target = EnemyTargetMode.Nearest,
-            scrap = R(6, 10), cardDrop = 0.60f, blueprintDrop = 0.35f, drops = new[] { "P_Guclu", "P_Taunt", "P_CPU", "P_Tamir" } },
+        // Düşmanlar (hepsi ortak kart havuzundan düşürür)
+        new DroneSpec("Drone_Dusman_Yakin") { hp = 52,  move = 4, damage = R(8, 12),  range = 1, target = EnemyTargetMode.Nearest,
+            scrap = R(2, 4), cardDrop = 0.35f, blueprintDrop = 0.16f, drops = SharedDropPool },
+        new DroneSpec("Drone_Dusman_Uzak")  { hp = 36,  move = 3, damage = R(6, 10),  range = 4, target = EnemyTargetMode.LowestHealth,
+            scrap = R(2, 4), cardDrop = 0.40f, blueprintDrop = 0.18f, drops = SharedDropPool },
+        new DroneSpec("Drone_Dusman_Boss")  { hp = 110, move = 3, damage = R(12, 17), range = 1, target = EnemyTargetMode.Nearest,
+            scrap = R(6, 10), cardDrop = 0.65f, blueprintDrop = 0.40f, drops = SharedDropPool },
 
-        // Dostlar (blueprint ile çağrılır, şarj = kaç tur yaşar)
-        new DroneSpec("Drone_Dost_Yakin") { hp = 70,  move = 4, charge = 3 },
-        new DroneSpec("Drone_Dost_Uzak")  { hp = 35,  move = 3, charge = 3 },
-        new DroneSpec("Drone_Dost_Boss")  { hp = 110, move = 3, charge = 5 },
+        // Dostlar (blueprint ile çağrılır, şarj = kaç tur yaşar; kitlerinde aynı ortak kartları kullanırlar)
+        new DroneSpec("Drone_Dost_Yakin") { hp = 85,  move = 4, charge = 4, kit = new[] { "YakinSaldiri", "P_Stun", "AnaKalkan" } },
+        new DroneSpec("Drone_Dost_Uzak")  { hp = 50,  move = 3, charge = 4, kit = new[] { "A_Patlat", "UzakSaldiri", "P_Uzak2x" } },
+        new DroneSpec("Drone_Dost_Boss")  { hp = 140, move = 3, charge = 5, kit = new[] { "P_Guclu", "P_Taunt", "P_CPU" } },
     };
 
     // ───────────────────────── ÇEVRE ─────────────────────────
     public const int BarrelRadius = 2;
-    public static readonly IntRange BarrelDamage = R(25, 35);
+    public static readonly IntRange BarrelDamage = R(30, 40);
 
-    public static readonly IntRange PileScrap = R(1, 4);
-    public const float PileBlueprintChance = 0.10f;
-    public const string PileRepairCard = "P_Tamir";
-    public const float PileRepairChance = 0.30f;
+    public static readonly IntRange PileScrap = R(2, 5);
+    public const float PileBlueprintChance = 0.15f;
 
     // ═════════════════════════ Uygulama ═════════════════════════
 
@@ -135,6 +117,14 @@ public static class DengeTablosu
 
     private static Dictionary<string, CardData> ApplyCards()
     {
+        string[] obsolete =
+        {
+            "P_Tamir", "R_HizliTamir", "R_AgirDarbe", "R_SokAtisi", "R_DeliciAtis",
+            "A_Yakin", "A_Uzak", "A_Kalkan", "A_Stun", "A_Uzak2x", "A_Guclu", "A_Taunt", "A_CPU",
+            "P_Yakin", "P_Uzak", "P_Kalkan", "P_Patlat"
+        };
+        foreach (string old in obsolete) AssetDatabase.DeleteAsset($"{CardsFolder}/{old}.asset");
+
         var map = new Dictionary<string, CardData>();
         foreach (CardSpec s in Cards)
         {
@@ -154,7 +144,7 @@ public static class DengeTablosu
             // Kartın türü dışındaki alanları sıfırla: eski kartlarda kalan çöp değerler etki etmesin.
             c.damage = 0; c.range = 1; c.hitChance = 1f; c.critChance = 0f; c.stunChance = 0f; c.stunTurns = 1;
             c.shield = 0; c.tauntTurns = 0;
-            c.heal = 0; c.cpuRestore = 0; c.chargeAll = 0; c.selfDestruct = false; c.blastRadius = 2; c.blastDamage = 0;
+            c.cpuRestore = 0; c.chargeAll = 0; c.selfDestruct = false; c.blastRadius = 2; c.blastDamage = 0;
 
             if (s.type == CardType.Attack)
             {
@@ -194,7 +184,12 @@ public static class DengeTablosu
                 }
                 if (d != null)
                 {
-                    if (d.isAlly) d.charge = s.charge;
+                    if (d.isAlly)
+                    {
+                        d.charge = s.charge;
+                        d.kit = new List<CardData>();
+                        foreach (string k in s.kit) d.kit.Add(cards[k]);
+                    }
                     else
                     {
                         d.scrap = s.scrap;
@@ -226,18 +221,16 @@ public static class DengeTablosu
         GameObject pile = PrefabUtility.LoadPrefabContents(ScrapPrefab);
         try
         {
-            ApplyPile(new SerializedObject(pile.GetComponent<ScrapPile>()), cards);
+            ApplyPile(new SerializedObject(pile.GetComponent<ScrapPile>()));
             PrefabUtility.SaveAsPrefabAsset(pile, ScrapPrefab);
         }
         finally { PrefabUtility.UnloadPrefabContents(pile); }
     }
 
-    private static void ApplyPile(SerializedObject so, Dictionary<string, CardData> cards)
+    private static void ApplyPile(SerializedObject so)
     {
         SetRange(so.FindProperty("scrap"), PileScrap);
         so.FindProperty("blueprintChance").floatValue = PileBlueprintChance;
-        so.FindProperty("repairCard").objectReferenceValue = cards[PileRepairCard];
-        so.FindProperty("repairChance").floatValue = PileRepairChance;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -251,7 +244,7 @@ public static class DengeTablosu
         string[] aiProps = { "attackDamage", "attackRange", "targetMode" };
         string[] droneProps = { "charge", "scrap", "cardDropChance", "blueprintChance", "dropCards" };
         string[] barrelProps = { "explosionRadius", "explosionDamage" };
-        string[] pileProps = { "scrap", "blueprintChance", "repairCard", "repairChance" };
+        string[] pileProps = { "scrap", "blueprintChance" };
 
         var cards = new Dictionary<string, CardData>();
         foreach (CardSpec s in Cards) cards[s.file] = LoadCard(s.file);
@@ -291,7 +284,7 @@ public static class DengeTablosu
                     }
                 }
                 foreach (ScrapPile p in root.GetComponentsInChildren<ScrapPile>(true))
-                    if (!RevertOrNothing(p, pileProps)) ApplyPile(new SerializedObject(p), cards);
+                    if (!RevertOrNothing(p, pileProps)) ApplyPile(new SerializedObject(p));
                 foreach (CardManager cm in root.GetComponentsInChildren<CardManager>(true))
                     ApplyHand(new SerializedObject(cm), cards);
             }
@@ -375,6 +368,7 @@ public static class DengeTablosu
         public EnemyTargetMode target;
         public float cardDrop, blueprintDrop;
         public string[] drops = Array.Empty<string>();
+        public string[] kit = Array.Empty<string>();
         public DroneSpec(string prefab) { this.prefab = prefab; }
     }
 }

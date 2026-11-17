@@ -16,10 +16,10 @@ MonoBehaviour:
   cardType: 0
   icon: {fileID: 0}
   description: 
-  cpuCost: 1
-  scrapCost: 5
+  cpuCost: 2
+  scrapCost: 0
   damage:
-    min: 34
+    min: 36
     max: 46
   range: 1
   hitChance: 1

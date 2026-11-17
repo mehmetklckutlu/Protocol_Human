@@ -17,9 +17,13 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     [Header("Renkler")]
     [SerializeField] private Color attackColor = new Color(0.72f, 0.20f, 0.22f);
     [SerializeField] private Color defenseColor = new Color(0.18f, 0.42f, 0.72f);
-    [SerializeField] private Color summonColor = new Color(0.18f, 0.58f, 0.34f);
+    [SerializeField] private Color summonColor = new Color(0.24f, 0.13f, 0.06f);
     [SerializeField] private Color utilityColor = new Color(0.48f, 0.26f, 0.68f);
     [SerializeField] private Color selectedColor = new Color(1f, 0.85f, 0.25f);
+
+    private static readonly Color ScrapOrangeBorder = new Color(0.96f, 0.54f, 0.14f, 1f);
+    private static readonly Color ScrapOrangeFrame = new Color(0.55f, 0.28f, 0.06f, 1f);
+    private static readonly Color DefaultDarkFrame = new Color(0.06f, 0.08f, 0.12f, 1f);
 
     [Header("Animasyon Ayarları")]
     [SerializeField] private float hoverLift = 38f;
@@ -33,7 +37,9 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private CanvasGroup visualGroup;
     private Canvas overrideCanvas;
     private Image borderGlowImage;
+    private Image darkFrameImage;
     private Image headerBarImage;
+    private RectTransform descBoxRect;
     private Image cpuIconImage;
     private GameObject cpuBadgeObj;
     private GameObject scrapBadgeObj;
@@ -44,6 +50,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private bool pressed;
     private bool isSelected;
     private bool isInteractable = true;
+    private bool isSummonCard;
     private float baseArcY;
     private float baseArcAngle;
     private float introTimer;
@@ -90,11 +97,11 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         RectTransform dfRt = darkFrameGo.GetComponent<RectTransform>();
         dfRt.anchorMin = Vector2.zero;
         dfRt.anchorMax = Vector2.one;
-        dfRt.offsetMin = new Vector2(-1f, -1f);
-        dfRt.offsetMax = new Vector2(1f, 1f);
-        Image dfImg = darkFrameGo.GetComponent<Image>();
-        dfImg.color = new Color(0.06f, 0.08f, 0.12f, 1f);
-        dfImg.raycastTarget = false;
+        dfRt.offsetMin = new Vector2(-2f, -2f);
+        dfRt.offsetMax = new Vector2(2f, 2f);
+        darkFrameImage = darkFrameGo.GetComponent<Image>();
+        darkFrameImage.color = DefaultDarkFrame;
+        darkFrameImage.raycastTarget = false;
 
         GameObject bodyGo = new GameObject("CardBody", typeof(RectTransform), typeof(Image));
         bodyGo.transform.SetParent(visualRoot, false);
@@ -125,20 +132,20 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
         GameObject descBgGo = new GameObject("DescBox", typeof(RectTransform), typeof(Image));
         descBgGo.transform.SetParent(visualRoot, false);
-        RectTransform dbRt = descBgGo.GetComponent<RectTransform>();
-        dbRt.anchorMin = new Vector2(0.05f, 0.03f);
-        dbRt.anchorMax = new Vector2(0.95f, 0.36f);
-        dbRt.offsetMin = Vector2.zero;
-        dbRt.offsetMax = Vector2.zero;
+        descBoxRect = descBgGo.GetComponent<RectTransform>();
+        descBoxRect.anchorMin = new Vector2(0.05f, 0.03f);
+        descBoxRect.anchorMax = new Vector2(0.95f, 0.36f);
+        descBoxRect.offsetMin = Vector2.zero;
+        descBoxRect.offsetMax = Vector2.zero;
         Image dbImg = descBgGo.GetComponent<Image>();
         dbImg.color = new Color(0.04f, 0.06f, 0.09f, 0.68f);
         dbImg.raycastTarget = false;
 
         if (iconImage != null) iconImage.transform.SetParent(visualRoot, false);
-        if (nameText != null) nameText.transform.SetParent(visualRoot, false);
-        if (valueText != null) valueText.transform.SetParent(visualRoot, false);
-        if (descriptionText != null) descriptionText.transform.SetParent(visualRoot, false);
-        if (costText != null) costText.transform.SetParent(visualRoot, false);
+        if (nameText != null) { nameText.transform.SetParent(visualRoot, false); RuntimeArt.ApplyPixelFont(nameText); }
+        if (valueText != null) { valueText.transform.SetParent(visualRoot, false); RuntimeArt.ApplyPixelFont(valueText); }
+        if (descriptionText != null) { descriptionText.transform.SetParent(visualRoot, false); RuntimeArt.ApplyPixelFont(descriptionText); }
+        if (costText != null) { costText.transform.SetParent(visualRoot, false); RuntimeArt.ApplyPixelFont(costText); }
 
         if (iconImage != null)
         {
@@ -258,6 +265,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         str.offsetMax = new Vector2(-2f, 0f);
         scrapCostText = stGo.GetComponent<TextMeshProUGUI>();
         if (costText != null) scrapCostText.font = costText.font;
+        RuntimeArt.ApplyPixelFont(scrapCostText);
         scrapCostText.fontSize = 15f;
         scrapCostText.fontStyle = FontStyles.Bold;
         scrapCostText.alignment = TextAlignmentOptions.Center;
@@ -298,12 +306,105 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
     }
 
+    private void ApplyCardLayout(bool summon)
+    {
+        if (nameText != null)
+        {
+            RectTransform nr = nameText.rectTransform;
+            nr.anchorMin = summon ? new Vector2(0.05f, 0.80f) : new Vector2(0.24f, 0.80f);
+            nr.anchorMax = new Vector2(0.95f, 0.97f);
+            nr.offsetMin = Vector2.zero;
+            nr.offsetMax = Vector2.zero;
+        }
+
+        if (iconImage != null)
+        {
+            RectTransform ir = iconImage.rectTransform;
+            ir.anchorMin = summon ? new Vector2(0.18f, 0.47f) : new Vector2(0.18f, 0.44f);
+            ir.anchorMax = summon ? new Vector2(0.82f, 0.79f) : new Vector2(0.82f, 0.78f);
+            ir.offsetMin = Vector2.zero;
+            ir.offsetMax = Vector2.zero;
+        }
+
+        if (valueText != null)
+        {
+            valueText.gameObject.SetActive(false);
+        }
+
+        if (descBoxRect != null)
+        {
+            descBoxRect.anchorMin = summon ? new Vector2(0.05f, 0.19f) : new Vector2(0.05f, 0.04f);
+            descBoxRect.anchorMax = summon ? new Vector2(0.95f, 0.45f) : new Vector2(0.95f, 0.41f);
+            descBoxRect.offsetMin = Vector2.zero;
+            descBoxRect.offsetMax = Vector2.zero;
+        }
+
+        if (descriptionText != null)
+        {
+            RectTransform dr = descriptionText.rectTransform;
+            dr.anchorMin = summon ? new Vector2(0.08f, 0.20f) : new Vector2(0.08f, 0.05f);
+            dr.anchorMax = summon ? new Vector2(0.92f, 0.44f) : new Vector2(0.92f, 0.40f);
+            dr.offsetMin = Vector2.zero;
+            dr.offsetMax = Vector2.zero;
+        }
+
+        if (cpuBadgeObj != null)
+        {
+            RectTransform cbr = cpuBadgeObj.GetComponent<RectTransform>();
+            if (summon)
+            {
+                cbr.anchorMin = new Vector2(1f, 0f);
+                cbr.anchorMax = new Vector2(1f, 0f);
+                cbr.pivot = new Vector2(1f, 0f);
+                cbr.anchoredPosition = new Vector2(-60f, 5f);
+                cbr.sizeDelta = new Vector2(50f, 25f);
+            }
+            else
+            {
+                cbr.anchorMin = new Vector2(0f, 1f);
+                cbr.anchorMax = new Vector2(0f, 1f);
+                cbr.pivot = new Vector2(0f, 1f);
+                cbr.anchoredPosition = new Vector2(-4f, 4f);
+                cbr.sizeDelta = new Vector2(50f, 28f);
+            }
+        }
+
+        if (scrapBadgeObj != null)
+        {
+            RectTransform sbr = scrapBadgeObj.GetComponent<RectTransform>();
+            if (summon)
+            {
+                sbr.anchorMin = new Vector2(1f, 0f);
+                sbr.anchorMax = new Vector2(1f, 0f);
+                sbr.pivot = new Vector2(1f, 0f);
+                sbr.anchoredPosition = new Vector2(-5f, 5f);
+                sbr.sizeDelta = new Vector2(52f, 25f);
+            }
+            else
+            {
+                sbr.anchorMin = new Vector2(1f, 1f);
+                sbr.anchorMax = new Vector2(1f, 1f);
+                sbr.pivot = new Vector2(1f, 1f);
+                sbr.anchoredPosition = new Vector2(4f, -34f);
+                sbr.sizeDelta = new Vector2(54f, 26f);
+            }
+        }
+    }
+
     public void Setup(CardData card, bool interactable, bool selected, int handIndex = -1)
     {
         EnsureEnhancedVisuals();
 
         isInteractable = interactable;
         isSelected = selected;
+        isSummonCard = card != null && card.cardType == CardType.Summon;
+
+        ApplyCardLayout(isSummonCard);
+
+        if (darkFrameImage != null)
+            darkFrameImage.color = isSummonCard ? ScrapOrangeFrame : DefaultDarkFrame;
+        if (borderGlowImage != null && isSummonCard)
+            borderGlowImage.color = ScrapOrangeBorder;
 
         if (nameText != null) nameText.text = card.cardName;
         if (valueText != null)
@@ -326,7 +427,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
         if (scrapBadgeObj != null)
         {
-            bool hasScrap = card.scrapCost > 0;
+            bool hasScrap = usesCpu && card.scrapCost > 0;
             scrapBadgeObj.SetActive(hasScrap);
             if (hasScrap && scrapCostText != null)
             {
@@ -340,11 +441,20 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
         if (iconImage != null)
         {
-            Sprite sp = card.icon;
-            if (sp == null)
+            Sprite sp = null;
+            if (isSummonCard)
             {
-                if (card.cpuRestore > 0 || card.chargeAll > 0) sp = RuntimeArt.CpuIcon;
-                else if (card.cardType == CardType.Summon || card.scrapCost > 0) sp = RuntimeArt.ScrapIcon;
+                if (card.summonPrefab != null)
+                {
+                    SpriteRenderer sr = card.summonPrefab.GetComponentInChildren<SpriteRenderer>();
+                    if (sr != null && sr.sprite != null) sp = sr.sprite;
+                }
+                if (sp == null) sp = card.icon;
+            }
+            else
+            {
+                sp = RuntimeArt.GetCardArt(card);
+                if (sp == null) sp = card.icon;
             }
             iconImage.sprite = sp;
             iconImage.enabled = sp != null;
@@ -357,7 +467,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             {
                 case CardType.Attack: typeColor = attackColor; break;
                 case CardType.Defense: typeColor = defenseColor; break;
-                case CardType.Summon: typeColor = summonColor; break;
+                case CardType.Summon: typeColor = new Color(0.22f, 0.12f, 0.06f); break;
                 default: typeColor = utilityColor; break;
             }
             background.color = selected ? Color.Lerp(typeColor, selectedColor, 0.35f) : typeColor;
@@ -388,7 +498,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         float targetY = baseArcY;
         float targetScale = 1f;
         float targetAngle = baseArcAngle;
-        Color targetBorder = new Color(0.14f, 0.22f, 0.32f, 0.95f);
+        Color targetBorder = isSummonCard ? ScrapOrangeBorder : new Color(0.14f, 0.22f, 0.32f, 0.95f);
 
         if (!isInteractable && !isSelected)
         {
@@ -402,7 +512,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             targetY = selectedLift + pulse * 4f;
             targetScale = selectedScale;
             targetAngle = 0f;
-            targetBorder = Color.Lerp(selectedColor, new Color(0.3f, 1f, 1f, 1f), 0.5f + 0.5f * pulse);
+            targetBorder = Color.Lerp(selectedColor, isSummonCard ? ScrapOrangeBorder : new Color(0.3f, 1f, 1f, 1f), 0.5f + 0.5f * pulse);
         }
         else if (hovered)
         {
@@ -410,7 +520,7 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
             targetScale = pressed ? hoverScale * 0.94f : hoverScale;
             targetAngle = 0f;
             targetBorder = isInteractable
-                ? new Color(0.2f, 0.95f, 1f, 1f)
+                ? (isSummonCard ? new Color(1f, 0.72f, 0.25f, 1f) : new Color(0.2f, 0.95f, 1f, 1f))
                 : new Color(0.95f, 0.35f, 0.35f, 0.9f);
         }
 

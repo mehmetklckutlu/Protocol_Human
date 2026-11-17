@@ -21,7 +21,6 @@ public static class DengeSimulatoru
     private const int Runs = 3000;
     private const int WakeDistance = 8;
     private const int MaxTurns = 40;
-    private const float HealBelow = 0.55f;
 
     [MenuItem("Protocol Human/Denge/Simülasyonu Çalıştır")]
     public static void RunMenu()
@@ -59,7 +58,7 @@ public static class DengeSimulatoru
         public List<CardData> turnCards;
         public List<Ally> allies = new List<Ally>();
         // istatistik
-        public int dmgTaken, healed, lootPlayed, scrapEarned, scrapSpent, blueprints, summons, turns;
+        public int dmgTaken, lootPlayed, scrapEarned, scrapSpent, blueprints, summons, turns;
     }
 
     private static Dictionary<char, EnemyDef> defs;
@@ -87,7 +86,7 @@ public static class DengeSimulatoru
         }
     }
 
-    private struct PileInfo { public IntRange scrap; public float repairChance, bpChance; public CardData repair; public List<CardData> blueprints; }
+    private struct PileInfo { public IntRange scrap; public float bpChance; public List<CardData> blueprints; }
 
     public static string Run()
     {
@@ -175,7 +174,7 @@ public static class DengeSimulatoru
     private static void Campaign(StringBuilder sb, List<string> groups, int piles, bool allies)
     {
         int wins = 0; var deathAt = new int[groups.Count];
-        long endHp = 0, scrapE = 0, scrapS = 0, healed = 0, lootPlayed = 0, bps = 0, summons = 0;
+        long endHp = 0, scrapE = 0, scrapS = 0, lootPlayed = 0, bps = 0, summons = 0;
         for (int r = 0; r < Runs; r++)
         {
             var ctx = NewCtx(r + 100000);
@@ -188,7 +187,6 @@ public static class DengeSimulatoru
                 for (int k = 0; k < found; k++)
                 {
                     int s = Roll(ctx, pile.scrap); ctx.scrap += s; ctx.scrapEarned += s;
-                    if (pile.repair != null && ctx.rng.NextDouble() < pile.repairChance) Give(ctx, pile.repair);
                     if (pile.blueprints.Count > 0 && ctx.rng.NextDouble() < pile.bpChance)
                     { ctx.blueprints++; Give(ctx, pile.blueprints[ctx.rng.Next(pile.blueprints.Count)]); }
                 }
@@ -196,14 +194,13 @@ public static class DengeSimulatoru
                 if (!Fight(ctx, groups[i])) { alive = false; deathAt[i]++; break; }
             }
             if (alive) { wins++; endHp += ctx.hp; }
-            scrapE += ctx.scrapEarned; scrapS += ctx.scrapSpent; healed += ctx.healed; lootPlayed += ctx.lootPlayed;
+            scrapE += ctx.scrapEarned; scrapS += ctx.scrapSpent; lootPlayed += ctx.lootPlayed;
             bps += ctx.blueprints; summons += ctx.summons;
         }
 
         sb.AppendLine($"- **Bitirme oranı: %{wins * 100f / Runs:0.0}**");
         if (wins > 0) sb.AppendLine($"- Bitirenlerin kalan canı (ort.): {endHp / (float)wins:0} / {DengeTablosu.MainHP}");
         sb.AppendLine($"- Kazanılan hurda (ort.): {scrapE / (float)Runs:0}, harcanan: {scrapS / (float)Runs:0}");
-        sb.AppendLine($"- Tamir ile geri kazanılan can (ort.): {healed / (float)Runs:0}");
         sb.AppendLine($"- Oynanan bulunmuş kart (ort.): {lootPlayed / (float)Runs:0.0}, bulunan blueprint (ort.): {bps / (float)Runs:0.0}, çağrılan dost drone (ort.): {summons / (float)Runs:0.0}");
         var worst = deathAt.Select((n, i) => (n, i)).Where(x => x.n > 0).OrderByDescending(x => x.n).Take(4).ToList();
         if (worst.Count > 0)
@@ -305,22 +302,19 @@ public static class DengeSimulatoru
 
         bool Threat() => enemies.Any(e => e.hp > 0 && e.stun == 0 && e.dist <= e.def.range + e.def.move * 2);
 
-        // 1) Can düşükse tamir
-        if (ctx.hp <= ctx.maxHp * HealBelow) TryPlay(ctx, enemies, c => !c.heal.IsZero, usedTurnCards);
-
-        // 2) Can çok düşük ve tehdit varsa önce kalkan
+        // 1) Can çok düşük ve tehdit varsa önce kalkan
         if (ctx.hp <= ctx.maxHp * 0.35f && Threat()) TryPlay(ctx, enemies, c => c.cardType == CardType.Defense, usedTurnCards);
 
-        // 3) Saldırılar (en yüksek beklenen hasar önce)
+        // 2) Saldırılar (en yüksek beklenen hasar önce)
         while (enemies.Any(e => e.hp > 0) && TryPlay(ctx, enemies, c => c.cardType == CardType.Attack, usedTurnCards)) { }
 
-        // 4) Kalan CPU ile kalkan (tehdit varsa)
+        // 3) Kalan CPU ile kalkan (tehdit varsa)
         if (enemies.Any(e => e.hp > 0) && Threat()) TryPlay(ctx, enemies, c => c.cardType == CardType.Defense, usedTurnCards);
 
-        // 5) CPU kartı: bir sonraki tura yedek
+        // 4) CPU kartı: bir sonraki tura yedek
         if (ctx.cpu <= 1) TryPlay(ctx, enemies, c => c.cpuRestore > 0, usedTurnCards);
 
-        // 6) El dolmak üzereyse artan CPU ile bedelsiz kartları oynayıp yer aç (ganimet ele sığsın)
+        // 5) El dolmak üzereyse artan CPU ile bedelsiz kartları oynayıp yer aç (ganimet ele sığsın)
         int cap = DengeTablosu.MaxHandSize - turnCards.Count;
         while (ctx.cpu > 0 && ctx.loot.Count >= cap - 1 &&
                TryPlay(ctx, enemies, c => c.scrapCost == 0 && c.cardType != CardType.Summon && !turnCards.Contains(c), usedTurnCards, dumping: true)) { }
@@ -337,7 +331,6 @@ public static class DengeSimulatoru
             if (dump == null) return false;
             ctx.cpu -= dump.cpuCost; ctx.loot.Remove(dump); ctx.lootPlayed++;
             if (dump.cardType == CardType.Defense) ctx.shield += Roll(ctx, dump.shield);
-            else if (!dump.heal.IsZero) { int h = Mathf.Min(Roll(ctx, dump.heal), ctx.maxHp - ctx.hp); ctx.hp += h; ctx.healed += h; }
             else if (dump.cardType == CardType.Attack)
             {
                 var t = enemies.Where(e => e.hp > 0 && e.dist <= dump.range).OrderBy(e => e.hp).First();
@@ -365,7 +358,7 @@ public static class DengeSimulatoru
             }
             else
             {
-                float score = c.cardType == CardType.Defense ? c.shield.Average : !c.heal.IsZero ? c.heal.Average : 1f;
+                float score = c.cardType == CardType.Defense ? c.shield.Average : 1f;
                 if (isLoot && c.cardType == CardType.Defense) score -= 3f;
                 if (score > bestScore) { bestScore = score; best = c; bestTarget = null; bestIsLoot = isLoot; }
             }
@@ -395,7 +388,6 @@ public static class DengeSimulatoru
                 ctx.shield += Roll(ctx, best.shield);
                 break;
             default:
-                if (!best.heal.IsZero) { int h = Mathf.Min(Roll(ctx, best.heal), ctx.maxHp - ctx.hp); ctx.hp += h; ctx.healed += h; }
                 if (best.cpuRestore > 0) ctx.cpu = Mathf.Min(ctx.maxCpu, ctx.cpu + best.cpuRestore);
                 break;
         }
@@ -482,8 +474,6 @@ public static class DengeSimulatoru
         pile = new PileInfo
         {
             scrap = new IntRange(so.FindProperty("scrap.min").intValue, so.FindProperty("scrap.max").intValue),
-            repairChance = so.FindProperty("repairChance").floatValue,
-            repair = so.FindProperty("repairCard").objectReferenceValue as CardData,
             bpChance = so.FindProperty("blueprintChance").floatValue,
             blueprints = new List<CardData>(),
         };

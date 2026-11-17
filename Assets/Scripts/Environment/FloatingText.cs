@@ -17,6 +17,7 @@ public class FloatingText : MonoBehaviour
         go.transform.position = new Vector3(worldPos.x, worldPos.y + 0.6f + line * 0.4f, -1f);
 
         TextMeshPro t = go.AddComponent<TextMeshPro>();
+        RuntimeArt.ApplyPixelFont(t);
         t.text = text;
         t.fontSize = 3.5f;
         t.fontStyle = FontStyles.Bold;

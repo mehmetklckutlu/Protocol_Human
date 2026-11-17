@@ -66,6 +66,7 @@ public class DamageNumber : MonoBehaviour
         go.transform.position = new Vector3(worldPos.x + jitterX, worldPos.y + 0.65f + stackOffset, -1.1f);
 
         TextMeshPro t = go.AddComponent<TextMeshPro>();
+        RuntimeArt.ApplyPixelFont(t);
         t.text = text;
         t.alignment = TextAlignmentOptions.Center;
         t.fontStyle = FontStyles.Bold;
