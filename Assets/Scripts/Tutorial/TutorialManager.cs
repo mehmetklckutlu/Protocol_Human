@@ -40,7 +40,7 @@ public class TutorialManager : MonoBehaviour
 
     [Header("Bitiş")]
     [Tooltip("Test bitince açılacak görev sahnesi.")]
-    public string nextScene = "Buyuk Level";
+    public string nextScene = "MainLevel";
 
     [Header("Yazı")]
     [SerializeField, Min(0f)] private float charDelay = 0.012f;
