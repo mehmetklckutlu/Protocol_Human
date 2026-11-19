@@ -198,7 +198,10 @@ public class TacticalCamera : MonoBehaviour
     {
         Vector3 pos = transform.position;
 
-        if (tileRects.Count > 0)
+        // Kamera zaten boyalı bir tile'ın üstündeyse binlerce dikdörtgeni taramaya gerek yok.
+        bool onTile = boundsTilemap != null && boundsTilemap.HasTile(boundsTilemap.WorldToCell(new Vector3(pos.x, pos.y, 0f)));
+
+        if (tileRects.Count > 0 && !onTile)
         {
             Vector2 p = new Vector2(pos.x, pos.y);
             float bestSqr = float.MaxValue;

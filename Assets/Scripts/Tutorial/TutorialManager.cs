@@ -405,8 +405,17 @@ public class TutorialManager : MonoBehaviour
         Time.timeScale = 1f;
         if (!string.IsNullOrEmpty(nextScene) && Application.CanStreamedLevelBeLoaded(nextScene))
             SceneManager.LoadScene(nextScene);
+        else if (Application.CanStreamedLevelBeLoaded("MainLevel"))
+        {
+            Debug.LogWarning("Tutorial: '" + nextScene + "' sahnesi Build Settings'te yok, MainLevel açılıyor.");
+            SceneManager.LoadScene("MainLevel");
+        }
         else
-            Debug.LogWarning("Tutorial: '" + nextScene + "' sahnesi Build Settings'te yok.");
+        {
+            int next = SceneManager.GetActiveScene().buildIndex + 1;
+            if (next < SceneManager.sceneCountInBuildSettings) SceneManager.LoadScene(next);
+            else Debug.LogWarning("Tutorial: '" + nextScene + "' sahnesi Build Settings'te yok.");
+        }
     }
 
     // ------------------------------------------------------------------ arayüz

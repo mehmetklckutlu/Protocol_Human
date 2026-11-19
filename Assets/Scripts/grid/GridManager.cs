@@ -36,7 +36,29 @@ public class GridManager : MonoBehaviour
         }
         Instance = this;
 
+        SnapOriginToTilemap();
         CreateGrid();
+    }
+
+    // gridOrigin elle girilince (örn. -74.6) hareket gridi zemin karelerinden kayıyor.
+    // Zemin tilemap'i varsa origin'i en yakın tile köşesine oturt.
+    private void SnapOriginToTilemap()
+    {
+        Tilemap reference = floorTilemap != null ? floorTilemap : wallTilemap;
+        if (reference == null) return;
+
+        Vector3Int cell = reference.WorldToCell(gridOrigin + new Vector3(cellSize * 0.5f, cellSize * 0.5f, 0f));
+        Vector3 snapped = reference.CellToWorld(cell);
+        snapped.z = gridOrigin.z;
+
+        if ((snapped - gridOrigin).sqrMagnitude > 0.0001f)
+            Debug.Log("GridManager: gridOrigin " + gridOrigin + " -> " + snapped + " (tilemap'e hizalandı)");
+        gridOrigin = snapped;
+    }
+
+    private void OnValidate()
+    {
+        if (!Application.isPlaying) SnapOriginToTilemap();
     }
 
     private void CreateGrid()

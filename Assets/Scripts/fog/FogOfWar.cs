@@ -26,6 +26,8 @@ public class FogOfWar : MonoBehaviour
     [SerializeField] private Color fogColor = Color.black;
     [Tooltip("Sis, bu sıralamadan düşük her şeyin üstünü kaplar.")]
     [SerializeField] private int sortingOrder = 100;
+    [Tooltip("Grid dışını kaplayan siyah alanın genişliği (birim).")]
+    [SerializeField, Min(10f)] private float outsideCoverSize = 500f;
 
     [Header("Yumuşaklık")]
     [Tooltip("Bir grid karesinin sis dokusunda kaç parçaya bölüneceği (kenar başına). 4 = kare başına 4x4 = 16 sis pikseli.")]
@@ -44,6 +46,9 @@ public class FogOfWar : MonoBehaviour
     private bool[] inAnim;
     private readonly List<int> animating = new List<int>();
     private readonly List<int> wallReveal = new List<int>();
+    // Sadece birimlerin görüş alanı çevresi yeniden hesaplanır (büyük haritada takılmayı önler).
+    private RectInt lastBox;
+    private bool hasLastBox = false;
 
     private Texture2D fogTex;
     private Color32[] pixels;
@@ -121,7 +126,7 @@ public class FogOfWar : MonoBehaviour
         return explored[cell.y * w + cell.x];
     }
 
-    public void Refresh() { forceRefresh = true; }
+    public void Refresh() { forceRefresh = true; hasLastBox = false; }
 
     public void RebuildBlockers()
     {
@@ -133,6 +138,7 @@ public class FogOfWar : MonoBehaviour
                 blocked[y * w + x] = n == null || !n.isWalkable;
             }
         forceRefresh = true;
+        hasLastBox = false;
     }
 
     private void Build()
@@ -161,7 +167,7 @@ public class FogOfWar : MonoBehaviour
         fogTex.name = "FogOfWarTexture";
         fogTex.filterMode = FilterMode.Bilinear;
         fogTex.wrapMode = TextureWrapMode.Clamp;
-        pixels = new Color32[texW * texH];
+        pixels = null; // piksel verisi doğrudan dokuya yazılıyor (GetPixelData)
 
         MarkDirty(0, 0, w - 1, h - 1);
         RebuildPixels();
@@ -176,7 +182,43 @@ public class FogOfWar : MonoBehaviour
         sr.sprite = sprite;
         sr.sortingOrder = sortingOrder;
 
+        BuildOutsideCover();
+
         ready = true;
+    }
+
+    // Grid'in dışında kalan alan (kamera arka planı) gri görünmesin diye
+    // grid dikdörtgeninin dört tarafına tamamen kapalı sis şeritleri koyar.
+    private void BuildOutsideCover()
+    {
+        Texture2D white = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        white.name = "FogOfWarOutsideTexture";
+        white.SetPixel(0, 0, Color.white);
+        white.Apply(false);
+        Sprite sq = Sprite.Create(white, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f, 0, SpriteMeshType.FullRect);
+
+        float gw = w * gm.CellSize;
+        float gh = h * gm.CellSize;
+        Vector3 o = gm.GridOrigin;
+        float b = outsideCoverSize;
+        Color c = fogColor; c.a = 1f;
+
+        MakeCover("FogOutside_Left",   sq, c, new Vector3(o.x - b / 2f,      o.y + gh / 2f, o.z), new Vector3(b, gh + 2f * b, 1f));
+        MakeCover("FogOutside_Right",  sq, c, new Vector3(o.x + gw + b / 2f, o.y + gh / 2f, o.z), new Vector3(b, gh + 2f * b, 1f));
+        MakeCover("FogOutside_Bottom", sq, c, new Vector3(o.x + gw / 2f, o.y - b / 2f,      o.z), new Vector3(gw, b, 1f));
+        MakeCover("FogOutside_Top",    sq, c, new Vector3(o.x + gw / 2f, o.y + gh + b / 2f, o.z), new Vector3(gw, b, 1f));
+    }
+
+    private void MakeCover(string name, Sprite sprite, Color color, Vector3 pos, Vector3 scale)
+    {
+        GameObject go = new GameObject(name, typeof(SpriteRenderer));
+        go.transform.SetParent(transform, false);
+        go.transform.position = pos;
+        go.transform.localScale = scale;
+        SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.color = color;
+        sr.sortingOrder = sortingOrder;
     }
 
     private void Update()
@@ -216,9 +258,39 @@ public class FogOfWar : MonoBehaviour
         return false;
     }
 
+    private RectInt ViewBox()
+    {
+        int m = visionRange + wallRevealDepth + 1;
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+        foreach (Vector2Int p in currentPositions)
+        {
+            if (p.x - m < minX) minX = p.x - m;
+            if (p.y - m < minY) minY = p.y - m;
+            if (p.x + m > maxX) maxX = p.x + m;
+            if (p.y + m > maxY) maxY = p.y + m;
+        }
+        if (minX == int.MaxValue) return new RectInt(0, 0, 0, 0);
+        minX = Mathf.Max(0, minX); minY = Mathf.Max(0, minY);
+        maxX = Mathf.Min(w - 1, maxX); maxY = Mathf.Min(h - 1, maxY);
+        return new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
+    }
+
+    private static RectInt Union(RectInt a, RectInt b)
+    {
+        if (a.width <= 0 || a.height <= 0) return b;
+        if (b.width <= 0 || b.height <= 0) return a;
+        int minX = Mathf.Min(a.xMin, b.xMin), minY = Mathf.Min(a.yMin, b.yMin);
+        int maxX = Mathf.Max(a.xMax, b.xMax), maxY = Mathf.Max(a.yMax, b.yMax);
+        return new RectInt(minX, minY, maxX - minX, maxY - minY);
+    }
+
     private void Recompute()
     {
-        System.Array.Clear(scratch, 0, scratch.Length);
+        RectInt box = ViewBox();
+        RectInt work = hasLastBox ? Union(box, lastBox) : new RectInt(0, 0, w, h);
+
+        for (int y = work.yMin; y < work.yMax; y++)
+            System.Array.Clear(scratch, y * w + work.xMin, work.width);
 
         foreach (Vector2Int p in currentPositions)
         {
@@ -228,14 +300,35 @@ public class FogOfWar : MonoBehaviour
                           Mult[0, oct], Mult[1, oct], Mult[2, oct], Mult[3, oct]);
         }
 
-        RevealWallBacks();
+        RevealWallBacks(box);
+
+        // work dışındaki kareler hiç değişmedi; scratch'e taşı ki dizi takası tutarlı kalsın.
+        if (hasLastBox)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                int row = y * w;
+                if (y < work.yMin || y >= work.yMax)
+                {
+                    System.Array.Copy(visible, row, scratch, row, w);
+                    continue;
+                }
+                if (work.xMin > 0) System.Array.Copy(visible, row, scratch, row, work.xMin);
+                if (work.xMax < w) System.Array.Copy(visible, row + work.xMax, scratch, row + work.xMax, w - work.xMax);
+            }
+        }
 
         bool[] old = visible;
         visible = scratch;
         scratch = old;
 
-        for (int i = 0; i < visible.Length; i++)
+        lastBox = box;
+        hasLastBox = true;
+
+        for (int y = work.yMin; y < work.yMax; y++)
+        for (int x = work.xMin; x < work.xMax; x++)
         {
+            int i = y * w + x;
             if (visible[i]) explored[i] = true;
 
             float target = visible[i] ? 0f
@@ -251,13 +344,13 @@ public class FogOfWar : MonoBehaviour
 
     // Görülen duvar karesine komşu olan duvar kareleri de açılır.
     // Böylece 2 kare kalınlığındaki duvarın arka sırası (borular) da görünür.
-    private void RevealWallBacks()
+    private void RevealWallBacks(RectInt box)
     {
         for (int pass = 0; pass < wallRevealDepth; pass++)
         {
             wallReveal.Clear();
-            for (int y = 0; y < h; y++)
-                for (int x = 0; x < w; x++)
+            for (int y = box.yMin; y < box.yMax; y++)
+                for (int x = box.xMin; x < box.xMax; x++)
                 {
                     int i = y * w + x;
                     if (!scratch[i] || !blocked[i]) continue;
@@ -326,6 +419,7 @@ public class FogOfWar : MonoBehaviour
         int px0 = dirtyMinX * s, py0 = dirtyMinY * s;
         int px1 = (dirtyMaxX + 1) * s, py1 = (dirtyMaxY + 1) * s;
         float inv = 1f / s;
+        Unity.Collections.NativeArray<Color32> data = fogTex.GetPixelData<Color32>(0);
 
         for (int py = py0; py < py1; py++)
         {
@@ -346,11 +440,10 @@ public class FogOfWar : MonoBehaviour
                 float a01 = CellAlpha(cx, cy + 1), a11 = CellAlpha(cx + 1, cy + 1);
                 float a = Mathf.Lerp(Mathf.Lerp(a00, a10, fx), Mathf.Lerp(a01, a11, fx), fy);
 
-                pixels[row + px] = new Color32(fogR, fogG, fogB, (byte)(Mathf.Clamp01(a) * 255f + 0.5f));
+                data[row + px] = new Color32(fogR, fogG, fogB, (byte)(Mathf.Clamp01(a) * 255f + 0.5f));
             }
         }
 
-        fogTex.SetPixels32(pixels);
         fogTex.Apply(false);
         texDirty = false;
     }

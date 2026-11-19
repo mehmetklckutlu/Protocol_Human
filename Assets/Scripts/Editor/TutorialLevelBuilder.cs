@@ -388,7 +388,7 @@ public static class TutorialLevelBuilder
         }
         tut.defenseCard = LoadCard("AnaKalkan");
         tut.summonCard = LoadCard("BP_Yakin");
-        tut.nextScene = "Buyuk Level";
+        tut.nextScene = "MainLevel";
         EditorUtility.SetDirty(tut);
 
         AddToBuildSettings(TargetScenePath);
