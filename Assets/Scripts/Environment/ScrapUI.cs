@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -22,12 +23,23 @@ public class ScrapUI : MonoBehaviour
     private Image progressFill;
     private GameObject progressBar;
     private TMP_Text resultText;
+    // Hurda paneli
     private TMP_Text counterText;
-    private Image counterIcon;
+    private TMP_Text scrapDeltaText;
+    private int lastScrap = int.MinValue;
+    private float scrapDeltaUntil;
+
+    // CPU paneli
     private GameObject cpuBox;
-    private TMP_Text cpuText;
+    private RectTransform cpuRect;
     private Image cpuIcon;
-    private int lastShownCpu = int.MinValue;
+    private TMP_Text cpuLabel;
+    private TMP_Text cpuValue;
+    private TMP_Text cpuSub;
+    private RectTransform cpuTextBlock;
+    private readonly List<Image> cpuCells = new List<Image>();
+    private int builtCellCount = -1;
+    private const int MaxCells = 12;
     private bool busy;
     private float resultHideTime;
 
@@ -48,6 +60,7 @@ public class ScrapUI : MonoBehaviour
             resultText.gameObject.SetActive(false);
 
         UpdateCpuDisplay();
+        UpdateScrapDelta();
     }
 
     public void BeginSearch()
@@ -88,67 +101,8 @@ public class ScrapUI : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        GameObject counterBox = new GameObject("ScrapCounterBox", typeof(RectTransform), typeof(Image));
-        counterBox.transform.SetParent(canvasGo.transform, false);
-        RectTransform cbr = counterBox.GetComponent<RectTransform>();
-        cbr.anchorMin = cbr.anchorMax = new Vector2(0f, 1f);
-        cbr.pivot = new Vector2(0f, 1f);
-        cbr.anchoredPosition = new Vector2(24f, -20f);
-        cbr.sizeDelta = new Vector2(240f, 58f);
-        Image cbImg = counterBox.GetComponent<Image>();
-        cbImg.color = new Color(0.06f, 0.09f, 0.13f, 0.88f);
-        cbImg.raycastTarget = false;
-
-        GameObject iconGo = new GameObject("ScrapIcon", typeof(RectTransform), typeof(Image));
-        iconGo.transform.SetParent(counterBox.transform, false);
-        RectTransform ir = iconGo.GetComponent<RectTransform>();
-        ir.anchorMin = ir.anchorMax = new Vector2(0f, 0.5f);
-        ir.pivot = new Vector2(0f, 0.5f);
-        ir.anchoredPosition = new Vector2(10f, 0f);
-        ir.sizeDelta = new Vector2(44f, 44f);
-        counterIcon = iconGo.GetComponent<Image>();
-        counterIcon.sprite = RuntimeArt.ScrapIcon;
-        counterIcon.preserveAspect = true;
-        counterIcon.raycastTarget = false;
-
-        counterText = MakeText(counterBox.transform, "Counter", 32, TextAlignmentOptions.Left);
-        RectTransform cr = counterText.rectTransform;
-        cr.anchorMin = new Vector2(0f, 0f);
-        cr.anchorMax = new Vector2(1f, 1f);
-        cr.offsetMin = new Vector2(62f, 0f);
-        cr.offsetMax = new Vector2(-10f, 0f);
-
-        cpuBox = new GameObject("CpuCounterBox", typeof(RectTransform), typeof(Image));
-        cpuBox.transform.SetParent(canvasGo.transform, false);
-        RectTransform cpbr = cpuBox.GetComponent<RectTransform>();
-        cpbr.anchorMin = cpbr.anchorMax = new Vector2(0f, 0f);
-        cpbr.pivot = new Vector2(0f, 0f);
-        cpbr.anchoredPosition = new Vector2(24f, 24f);
-        cpbr.sizeDelta = new Vector2(220f, 58f);
-        Image cpbImg = cpuBox.GetComponent<Image>();
-        cpbImg.color = new Color(0.05f, 0.11f, 0.16f, 0.90f);
-        cpbImg.raycastTarget = false;
-
-        GameObject cpuIconGo = new GameObject("CpuIcon", typeof(RectTransform), typeof(Image));
-        cpuIconGo.transform.SetParent(cpuBox.transform, false);
-        RectTransform cir = cpuIconGo.GetComponent<RectTransform>();
-        cir.anchorMin = cir.anchorMax = new Vector2(0f, 0.5f);
-        cir.pivot = new Vector2(0f, 0.5f);
-        cir.anchoredPosition = new Vector2(10f, 0f);
-        cir.sizeDelta = new Vector2(44f, 44f);
-        cpuIcon = cpuIconGo.GetComponent<Image>();
-        cpuIcon.sprite = RuntimeArt.CpuIcon;
-        cpuIcon.preserveAspect = true;
-        cpuIcon.raycastTarget = false;
-
-        cpuText = MakeText(cpuBox.transform, "CpuCounter", 32, TextAlignmentOptions.Left);
-        cpuText.color = new Color(0.55f, 0.98f, 1f);
-        RectTransform cptr = cpuText.rectTransform;
-        cptr.anchorMin = new Vector2(0f, 0f);
-        cptr.anchorMax = new Vector2(1f, 1f);
-        cptr.offsetMin = new Vector2(62f, 0f);
-        cptr.offsetMax = new Vector2(-10f, 0f);
-        cpuBox.SetActive(false);
+        BuildScrapPanel(canvasGo.transform);
+        BuildCpuPanel(canvasGo.transform);
 
         panel = new GameObject("SearchPanel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(canvasGo.transform, false);
@@ -211,9 +165,136 @@ public class ScrapUI : MonoBehaviour
         rt.offsetMax = Vector2.zero;
     }
 
+    // ================================================================== HUD panelleri
+
+    /// <summary>Sanat pikseli cinsinden sol-üst köşeye göre yerleşim (1 px = HudArt.Px birim).</summary>
+    private static RectTransform ArtRect(Transform parent, string name, float x, float y, float w, float h)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        RectTransform rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(x * HudArt.Px, -y * HudArt.Px);
+        rt.sizeDelta = new Vector2(w * HudArt.Px, h * HudArt.Px);
+        return rt;
+    }
+
+    private static Image ArtImage(Transform parent, string name, Sprite sprite, Color color, float x, float y, float w, float h)
+    {
+        RectTransform rt = ArtRect(parent, name, x, y, w, h);
+        Image img = rt.gameObject.AddComponent<Image>();
+        img.sprite = sprite;
+        img.color = color;
+        img.raycastTarget = false;
+        return img;
+    }
+
+    private static TMP_Text ArtText(Transform parent, string name, float size, Color color, TextAlignmentOptions align,
+                                    float x, float y, float w, float h)
+    {
+        TMP_Text t = MakeText(parent, name, size, align);
+        RectTransform rt = t.rectTransform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(x * HudArt.Px, -y * HudArt.Px);
+        rt.sizeDelta = new Vector2(w * HudArt.Px, h * HudArt.Px);
+        t.color = color;
+        t.overflowMode = TextOverflowModes.Overflow;
+        t.margin = Vector4.zero;
+        return t;
+    }
+
+    private void BuildScrapPanel(Transform canvas)
+    {
+        // 84x24 sanat pikseli: amber çerçeveli, kesik köşeli panel
+        RectTransform box = ArtRect(canvas, "ScrapCounterBox", 0, 0, 84, 24);
+        box.anchoredPosition = new Vector2(24f, -20f);
+        Image bg = box.gameObject.AddComponent<Image>();
+        bg.sprite = HudArt.Panel(HudArt.AmberDark);
+        bg.type = Image.Type.Sliced;
+        bg.raycastTarget = false;
+
+        ArtImage(box, "Accent", HudArt.Solid, (Color)HudArt.Cyan, 8, 1, 14, 1);
+        ArtImage(box, "SocketEdge", HudArt.Solid, (Color)HudArt.Outline, 4, 3, 18, 18);
+        ArtImage(box, "Socket", HudArt.Solid, (Color)HudArt.Socket, 5, 4, 16, 16);
+        ArtImage(box, "ScrapIcon", HudArt.ScrapIcon, Color.white, 6, 5, 14, 14);
+
+        ArtText(box, "Label", 16, (Color)HudArt.Dim, TextAlignmentOptions.MidlineLeft, 25, 3, 40, 7).text = "HURDA";
+        counterText = ArtText(box, "Counter", 34, (Color)HudArt.Amber, TextAlignmentOptions.MidlineLeft, 25, 9, 40, 13);
+        scrapDeltaText = ArtText(box, "Delta", 22, (Color)HudArt.Green, TextAlignmentOptions.MidlineRight, 50, 9, 30, 13);
+        scrapDeltaText.gameObject.SetActive(false);
+    }
+
+    private void BuildCpuPanel(Transform canvas)
+    {
+        cpuRect = ArtRect(canvas, "CpuCounterBox", 0, 0, 100, 28);
+        cpuRect.anchorMin = cpuRect.anchorMax = new Vector2(0f, 0f);
+        cpuRect.pivot = new Vector2(0f, 0f);
+        cpuRect.anchoredPosition = new Vector2(24f, 24f);
+        cpuBox = cpuRect.gameObject;
+        Image bg = cpuBox.AddComponent<Image>();
+        bg.sprite = HudArt.Panel(HudArt.CyanMid);
+        bg.type = Image.Type.Sliced;
+        bg.raycastTarget = false;
+
+        ArtImage(cpuRect, "Accent", HudArt.Solid, (Color)HudArt.Cyan, 8, 1, 10, 1);
+        cpuIcon = ArtImage(cpuRect, "CpuIcon", HudArt.ChipIcon, Color.white, 5, 5, 9, 9);
+        cpuLabel = ArtText(cpuRect, "Label", 15, (Color)HudArt.Dim, TextAlignmentOptions.Center, 1, 16, 17, 8);
+        cpuLabel.text = "CPU";
+
+        cpuTextBlock = ArtRect(cpuRect, "Text", 0, 0, 40, 28);
+        cpuValue = ArtText(cpuTextBlock, "Value", 30, (Color)HudArt.Cyan, TextAlignmentOptions.MidlineLeft, 0, 3, 40, 12);
+        cpuSub = ArtText(cpuTextBlock, "Sub", 17, (Color)HudArt.Dim, TextAlignmentOptions.MidlineLeft, 0, 15, 40, 9);
+
+        cpuBox.SetActive(false);
+    }
+
+    /// <summary>Hücre sayısı birimin maksimumuna göre değişince paneli yeniden boyutlandırır.</summary>
+    private void LayoutCpuCells(int count)
+    {
+        if (count == builtCellCount) return;
+        builtCellCount = count;
+
+        while (cpuCells.Count < count)
+            cpuCells.Add(ArtImage(cpuRect, "Cell" + cpuCells.Count, HudArt.Cell(HudArt.CellState.Empty), Color.white, 0, 0, 8, 13));
+
+        const float x0 = 20f, pitch = 10f;
+        for (int i = 0; i < cpuCells.Count; i++)
+        {
+            bool on = i < count;
+            cpuCells[i].gameObject.SetActive(on);
+            if (on) cpuCells[i].rectTransform.anchoredPosition = new Vector2((x0 + i * pitch) * HudArt.Px, -7f * HudArt.Px);
+        }
+
+        float textX = x0 + count * pitch + 3f;
+        cpuTextBlock.anchoredPosition = new Vector2(textX * HudArt.Px, 0f);
+        cpuRect.sizeDelta = new Vector2((textX + 40f) * HudArt.Px, 28f * HudArt.Px);
+    }
+
     private void UpdateCounter()
     {
-        if (counterText != null) counterText.text = "Hurda: " + ScrapInventory.Count;
+        int n = ScrapInventory.Count;
+        if (counterText != null) counterText.text = n.ToString();
+
+        // Artış olduysa kısa süre "+N" göster (ilk açılışta değil)
+        if (lastScrap != int.MinValue && n > lastScrap && scrapDeltaText != null)
+        {
+            scrapDeltaText.text = "+" + (n - lastScrap);
+            scrapDeltaText.gameObject.SetActive(true);
+            scrapDeltaUntil = Time.unscaledTime + 1.6f;
+        }
+        lastScrap = n;
+    }
+
+    private void UpdateScrapDelta()
+    {
+        if (scrapDeltaText == null || !scrapDeltaText.gameObject.activeSelf) return;
+        float left = scrapDeltaUntil - Time.unscaledTime;
+        if (left <= 0f) { scrapDeltaText.gameObject.SetActive(false); return; }
+        Color c = HudArt.Green;
+        c.a = Mathf.Clamp01(left / 0.5f);
+        scrapDeltaText.color = c;
     }
 
     private void UpdateCpuDisplay()
@@ -221,21 +302,73 @@ public class ScrapUI : MonoBehaviour
         if (cpuBox == null) return;
 
         TurnManager tm = TurnManager.Instance;
-        bool inCombat = tm != null && tm.IsInCombat();
-        if (cpuBox.activeSelf != inCombat)
+        CardManager cm = CardManager.Instance;
+        bool inCombat = tm != null && tm.IsInCombat() && !tm.IsGameOver;
+
+        // Kartları oynayan birim: sırası gelen dost birim; yoksa ana drone.
+        Unit u = null;
+        if (inCombat)
         {
-            cpuBox.SetActive(inCombat);
-            lastShownCpu = int.MinValue;
+            if (cm != null) u = cm.GetActiveUnit();
+            if (u == null || u.IsDead) u = FindPlayerCpuUnit(tm);
         }
 
-        if (!inCombat) return;
+        bool show = inCombat && u != null;
+        if (cpuBox.activeSelf != show) cpuBox.SetActive(show);
+        if (!show) return;
 
-        Unit cpuUnit = FindPlayerCpuUnit(tm);
-        int currentCpu = cpuUnit != null ? cpuUnit.currentCPU : 0;
-        if (currentCpu != lastShownCpu && cpuText != null)
+        // CPU kullanan birimde CPU, kullanmayanlarda tur başı kart hakkı gösterilir.
+        bool cpuMode = u.usesCpu;
+        int max = Mathf.Max(0, cpuMode ? u.maxCPU : u.cardsPerTurn);
+        int cur = cpuMode ? u.currentCPU : u.cardsPerTurn - u.cardsPlayedThisTurn;
+        cur = Mathf.Clamp(cur, 0, max);
+
+        int cells = Mathf.Clamp(max, 1, MaxCells);
+        LayoutCpuCells(cells);
+
+        // Maksimum 12'yi aşarsa hücreler orantılı dolar; sayı her zaman gerçek değeri gösterir.
+        int filled = max <= MaxCells ? cur : Mathf.RoundToInt(cur * (float)cells / max);
+
+        // Önizleme: seçili (hedeflenen) kart ya da fareyle üstüne gelinen kart
+        CardData preview = null;
+        if (tm.CurrentState == TurnState.PlayerTurn && cm != null)
+            preview = cm.PendingCard != null ? cm.PendingCard : CardView.HoveredCard;
+
+        int cost = preview == null ? 0 : (cpuMode ? preview.cpuCost : 1);
+        int costCells = max <= MaxCells ? cost : Mathf.CeilToInt(cost * (float)cells / max);
+        bool shortfall = cost > cur;
+        bool blinkOn = Mathf.Repeat(Time.unscaledTime * 3f, 1f) < 0.6f;
+
+        for (int i = 0; i < cells; i++)
         {
-            lastShownCpu = currentCpu;
-            cpuText.text = "Cpu: " + currentCpu;
+            HudArt.CellState st;
+            if (i < filled)
+                st = (!shortfall && cost > 0 && i >= filled - costCells && blinkOn) ? HudArt.CellState.Spend : HudArt.CellState.On;
+            else
+                st = (shortfall && i < Mathf.Min(costCells, cells)) ? HudArt.CellState.Short : HudArt.CellState.Empty;
+
+            Sprite sp = HudArt.Cell(st);
+            if (cpuCells[i].sprite != sp) cpuCells[i].sprite = sp;
+        }
+
+        cpuIcon.sprite = cpuMode ? HudArt.ChipIcon : HudArt.CardIcon;
+        cpuLabel.text = cpuMode ? "CPU" : "KART";
+        cpuValue.text = cur + "/" + max;
+
+        if (cost > 0 && shortfall)
+        {
+            cpuSub.text = "YETERSİZ";
+            cpuSub.color = HudArt.Red;
+        }
+        else if (cost > 0)
+        {
+            cpuSub.text = "-" + cost + (cpuMode ? " CPU" : " KART");
+            cpuSub.color = HudArt.Orange;
+        }
+        else
+        {
+            cpuSub.text = cpuMode ? "+" + u.cpuPerTurn + " TUR" : "HER TUR";
+            cpuSub.color = HudArt.Dim;
         }
     }
 

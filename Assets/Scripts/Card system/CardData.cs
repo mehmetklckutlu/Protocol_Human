@@ -17,6 +17,8 @@ public class CardData : ScriptableObject
     [Min(0)] public int cpuCost = 1;
     [Tooltip("Her kullanımda harcanan hurda. 0 = bedelsiz.")]
     [Min(0)] public int scrapCost = 0;
+    [Tooltip("Açık: kart altın çerçeveli 'güçlü kart' olarak görünür. 2+ CPU'luk saldırı kartları zaten otomatik güçlü sayılır.")]
+    public bool strongCard = false;
 
     [Header("Saldırı Kartı")]
     [Tooltip("Her vuruşta bu aralıktan rastgele hasar atılır.")]

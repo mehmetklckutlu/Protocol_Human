@@ -364,7 +364,7 @@ public class CardManager : MonoBehaviour
             Node n = GridManager.Instance.GetNode(b.Cell);
             if (n != null) nodes.Add(n);
         }
-        HighlightManager.Instance.ShowRange(nodes);
+        HighlightManager.Instance.ShowTargets(nodes);
         NotifyHandChanged();
     }
 

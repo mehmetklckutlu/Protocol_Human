@@ -1,11 +1,14 @@
-﻿using TMPro;
+using System;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // Oyun içi Ayarlar menüsü. Her sahnede kendiliğinden oluşur (sahneye bir şey eklemen gerekmez).
-// Esc tuşu ya da sol alttaki AYARLAR düğmesi ile açılır; açıkken oyun durur.
+// Sadece Esc tuşu ile açılır/kapanır (ekranda düğme yok); açıkken oyun durur.
+// Görünüm HUD ile aynı dilde: kesik köşeli panel, hücreli ses sürgüleri, susturma ikonları.
 public class SettingsMenu : MonoBehaviour
 {
     private const string MainMenuScene = "AnaMenü";
@@ -13,20 +16,32 @@ public class SettingsMenu : MonoBehaviour
     private static SettingsMenu instance;
     public static bool IsOpen => instance != null && instance.panelRoot != null && instance.panelRoot.activeSelf;
 
-    private static readonly Color PanelColor = new Color(0.07f, 0.09f, 0.11f, 0.97f);
-    private static readonly Color Accent = new Color(0.35f, 0.95f, 0.75f, 1f);
-    private static readonly Color TextColor = new Color(0.85f, 0.95f, 0.92f, 1f);
-    private static readonly Color DimText = new Color(0.55f, 0.65f, 0.62f, 1f);
-    private static readonly Color ButtonColor = new Color(0.14f, 0.18f, 0.2f, 1f);
+    // ---- renkler (HUD paleti) ----
+    private static readonly Color Cyan = new Color32(89, 242, 255, 255);
+    private static readonly Color CyanMid = new Color32(36, 150, 190, 255);
+    private static readonly Color Amber = new Color32(255, 184, 51, 255);
+    private static readonly Color TextColor = new Color32(214, 236, 242, 255);
+    private static readonly Color DimText = new Color32(120, 160, 170, 255);
+    private static readonly Color HeaderBg = new Color32(8, 24, 32, 255);
+    private static readonly Color RowHover = new Color32(18, 52, 66, 255);
+    private static readonly Color Divider = new Color32(30, 70, 86, 255);
+    private static readonly Color DangerText = new Color32(255, 140, 130, 255);
+
+    private const float PanelW = 672f;
+    private const float Pad = 18f;
+    private const int Cells = 10;
 
     private Canvas canvas;
     private GameObject panelRoot;
-    private GameObject gearButton;
+    private RectTransform box;
     private GameObject mainMenuButton;
     private RectTransform quitButton;
-    private float menuButtonY;
     private float timeScaleBeforeOpen = 1f;
     private TMP_Text nowPlaying;
+    private readonly List<RectTransform> eqBars = new List<RectTransform>();
+
+    // Susturmadan önceki değerler (tekrar açınca geri gelsin)
+    private readonly Dictionary<string, float> beforeMute = new Dictionary<string, float>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Create()
@@ -45,14 +60,30 @@ public class SettingsMenu : MonoBehaviour
         if (IsOpen) Close();
         bool inMenu = scene.name == MainMenuScene;
         if (mainMenuButton != null) mainMenuButton.SetActive(!inMenu);
-        // Ana menüdeyken ANA MENÜ düğmesi gizli; ÇIK düğmesi onun yerine kayar.
-        if (quitButton != null) quitButton.anchoredPosition = new Vector2(0, inMenu ? menuButtonY : menuButtonY - 72);
+        // Ana menüde ANA MENÜ düğmesi gizli; ÇIK düğmesi tüm genişliği alır.
+        if (quitButton != null)
+        {
+            float full = PanelW - 2 * Pad - 12f;
+            float half = (full - 14f) * 0.5f;
+            quitButton.sizeDelta = new Vector2(inMenu ? full : half, quitButton.sizeDelta.y);
+            quitButton.anchoredPosition = new Vector2(Pad + 6f + (inMenu ? 0f : half + 14f), quitButton.anchoredPosition.y);
+        }
         EnsureEventSystem();
     }
 
     private void Update()
     {
-        if (nowPlaying != null && IsOpen) nowPlaying.text = "Çalan: " + Music.CurrentDisplayName;
+        if (IsOpen)
+        {
+            if (nowPlaying != null) nowPlaying.text = Music.CurrentDisplayName;
+            float t = Time.unscaledTime;
+            for (int i = 0; i < eqBars.Count; i++)
+            {
+                float h = 6f + 22f * (0.5f + 0.5f * Mathf.Sin(t * (5f + i * 1.3f) + i * 1.7f));
+                if (Music.Volume <= 0.001f) h = 4f;
+                eqBars[i].sizeDelta = new Vector2(8f, h);
+            }
+        }
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (IsOpen) Close();
@@ -72,9 +103,8 @@ public class SettingsMenu : MonoBehaviour
         EnsureEventSystem();
         timeScaleBeforeOpen = Time.timeScale > 0f ? Time.timeScale : 1f;
         Time.timeScale = 0f;
-        if (nowPlaying != null) nowPlaying.text = "Çalan: " + Music.CurrentDisplayName;
+        if (nowPlaying != null) nowPlaying.text = Music.CurrentDisplayName;
         panelRoot.SetActive(true);
-        gearButton.SetActive(false);
         Sfx.Play("dialog_open", 0.6f);
     }
 
@@ -82,7 +112,6 @@ public class SettingsMenu : MonoBehaviour
     {
         if (!IsOpen) return;
         panelRoot.SetActive(false);
-        gearButton.SetActive(true);
         Time.timeScale = timeScaleBeforeOpen;
         PlayerPrefs.Save();
         Sfx.Play("ui_click", 0.7f);
@@ -101,62 +130,246 @@ public class SettingsMenu : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
         gameObject.AddComponent<GraphicRaycaster>();
 
-        // Sol alt köşedeki küçük AYARLAR düğmesi
-        gearButton = MakeButton(transform, "AYARLAR", new Vector2(150, 46), Toggle).gameObject;
-        RectTransform g = (RectTransform)gearButton.transform;
-        g.anchorMin = g.anchorMax = g.pivot = new Vector2(0, 0);
-        g.anchoredPosition = new Vector2(18, 18);
-        gearButton.GetComponentInChildren<TMP_Text>().fontSize = 20;
-
         // Tam ekran karartma (arkadaki oyuna tıklanmasın)
         panelRoot = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         panelRoot.transform.SetParent(transform, false);
         RectTransform pr = (RectTransform)panelRoot.transform;
         pr.anchorMin = Vector2.zero; pr.anchorMax = Vector2.one; pr.offsetMin = pr.offsetMax = Vector2.zero;
-        panelRoot.GetComponent<Image>().color = new Color(0, 0, 0, 0.7f);
+        panelRoot.GetComponent<Image>().color = new Color(0f, 0.01f, 0.02f, 0.8f);
 
-        // Ortadaki pencere
-        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(Outline));
-        box.transform.SetParent(panelRoot.transform, false);
-        RectTransform br = (RectTransform)box.transform;
-        br.sizeDelta = new Vector2(720, 860);
-        box.GetComponent<Image>().color = PanelColor;
-        Outline o = box.GetComponent<Outline>();
-        o.effectColor = Accent; o.effectDistance = new Vector2(3, -3);
+        // Pencere (yükseklik içerik dizildikten sonra ayarlanır)
+        box = NewRect(panelRoot.transform, "Box");
+        box.anchorMin = box.anchorMax = new Vector2(0.5f, 0.5f);
+        box.pivot = new Vector2(0.5f, 0.5f);
+        Image boxImg = box.gameObject.AddComponent<Image>();
+        boxImg.sprite = HudArt.Panel(HudArt.CyanMid);
+        boxImg.type = Image.Type.Sliced;
+        Img(box, "Accent", HudArt.Solid, Cyan, 24f, -3f, 90f, 3f);
 
-        float y = 380;
-        MakeText(box.transform, "AYARLAR", 46, Accent, new Vector2(0, y), new Vector2(660, 60), TextAlignmentOptions.Center);
-        y -= 55;
-        MakeText(box.transform, "SES", 24, DimText, new Vector2(0, y), new Vector2(620, 34), TextAlignmentOptions.Left);
-        y -= 60;
+        float y = -Pad;
 
-        MakeSlider(box.transform, "Ana Ses", y, () => Sfx.MasterVolume, v => Sfx.MasterVolume = v, null); y -= 75;
-        MakeSlider(box.transform, "Efektler", y, () => Sfx.Volume, v => Sfx.Volume = v, () => Sfx.Play("attack_ranged", 0.7f, 0f, 0.25f)); y -= 75;
-        MakeSlider(box.transform, "Robot Konuşma", y, () => Sfx.VoiceVolume, v => Sfx.VoiceVolume = v, () => Sfx.Voice()); y -= 75;
-        MakeSlider(box.transform, "Drone Motoru", y, () => Sfx.EngineVolume, v => Sfx.EngineVolume = v, null); y -= 60;
+        // ---- başlık ----
+        float hw = PanelW - 2 * Pad;
+        Img(box, "HeaderBg", HudArt.Solid, HeaderBg, Pad, y, hw, 66f);
+        Img(box, "HeaderLine", HudArt.Solid, CyanMid, Pad, y - 66f, hw, 3f);
+        Image chip = Img(box, "Chip", RuntimeArt.CpuIcon, Color.white, Pad + 14f, y - 12f, 42f, 42f);
+        chip.preserveAspect = true;
+        Text(box, "SİSTEM AYARLARI", 34, Cyan, TextAlignmentOptions.MidlineLeft, Pad + 70f, y, 420f, 66f);
 
-        // Müzik: tüm müzikler (ana menü, tutorial, level) bu ayarı kullanır
-        MakeText(box.transform, "MÜZİK", 24, DimText, new Vector2(0, y), new Vector2(620, 34), TextAlignmentOptions.Left);
-        y -= 60;
-        MakeSlider(box.transform, "Müzik", y, () => Music.Volume, v => Music.Volume = v, null); y -= 45;
-        nowPlaying = MakeText(box.transform, "", 20, DimText, new Vector2(0, y), new Vector2(620, 30), TextAlignmentOptions.Left);
-        y -= 70;
+        // ESC tuş kapağı (tıklayınca da kapanır)
+        RectTransform esc = NewRect(box, "Esc");
+        Place(esc, Pad + hw - 86f, y - 16f, 70f, 36f);
+        Image escImg = esc.gameObject.AddComponent<Image>();
+        escImg.sprite = HudArt.Solid; escImg.color = new Color32(40, 60, 70, 255);
+        Img(esc, "Shadow", HudArt.Solid, new Color32(20, 32, 40, 255), 0f, -30f, 70f, 6f).raycastTarget = false;
+        Text(esc, "ESC", 20, TextColor, TextAlignmentOptions.Center, 0f, 0f, 70f, 30f);
+        Button escBtn = esc.gameObject.AddComponent<Button>();
+        escBtn.targetGraphic = escImg;
+        escBtn.onClick.AddListener(Close);
+        HoverSound(esc.gameObject);
+        y -= 66f + 30f;
 
-        Button resume = MakeButton(box.transform, "DEVAM ET", new Vector2(300, 60), Close);
-        ((RectTransform)resume.transform).anchoredPosition = new Vector2(0, y); y -= 72;
+        // ---- ses ----
+        Section(ref y, "SES", HudArt.SpeakerIcon);
+        Row(ref y, "Ana Ses", "master", () => Sfx.MasterVolume, v => Sfx.MasterVolume = v, null);
+        Row(ref y, "Efektler", "sfx", () => Sfx.Volume, v => Sfx.Volume = v, () => Sfx.Play("attack_ranged", 0.7f, 0f, 0.25f));
+        Row(ref y, "Robot Konuşma", "voice", () => Sfx.VoiceVolume, v => Sfx.VoiceVolume = v, () => Sfx.Voice());
+        Row(ref y, "Drone Motoru", "engine", () => Sfx.EngineVolume, v => Sfx.EngineVolume = v, null);
+        y -= 8f;
 
-        Button menu = MakeButton(box.transform, "ANA MENÜ", new Vector2(300, 60), GoToMainMenu);
-        ((RectTransform)menu.transform).anchoredPosition = new Vector2(0, y);
-        menuButtonY = y; y -= 72;
+        // ---- müzik: tüm müzikler (ana menü, tutorial, level) bu ayarı kullanır ----
+        Section(ref y, "MÜZİK", HudArt.NoteIcon);
+        Row(ref y, "Müzik", "music", () => Music.Volume, v => Music.Volume = v, null);
+
+        Img(box, "NowEdge", HudArt.Solid, HudArt.Outline, Pad + 12f, y, hw - 24f, 44f);
+        Img(box, "NowBg", HudArt.Solid, new Color32(8, 22, 30, 255), Pad + 14f, y - 2f, hw - 28f, 40f);
+        Image note = Img(box, "Note", HudArt.NoteIcon, Cyan, Pad + 26f, y - 10f, 21f, 24f);
+        note.preserveAspect = true;
+        Text(box, "ÇALAN", 18, DimText, TextAlignmentOptions.MidlineLeft, Pad + 62f, y, 80f, 44f);
+        nowPlaying = Text(box, "", 22, Amber, TextAlignmentOptions.MidlineLeft, Pad + 140f, y, hw - 290f, 44f);
+        nowPlaying.overflowMode = TextOverflowModes.Ellipsis;
+        for (int i = 0; i < 7; i++)
+        {
+            Image bar = Img(box, "Eq" + i, HudArt.Solid, i % 2 == 0 ? Cyan : CyanMid, Pad + hw - 120f + i * 14f, 0f, 8f, 10f);
+            RectTransform br = bar.rectTransform;
+            br.pivot = new Vector2(0f, 0f);                    // alttan büyür
+            br.anchoredPosition = new Vector2(Pad + hw - 120f + i * 14f, y - 34f);
+            eqBars.Add(br);
+        }
+        y -= 44f + 30f;
+
+        // ---- butonlar ----
+        float full = hw - 12f;
+        Button resume = MakeButton("DEVAM ET", HudArt.PlayIcon, Pad + 6f, y, full, 66f, 26,
+            HudArt.Cyan, new Color32(14, 70, 88, 255), new Color32(225, 255, 255, 255), Close);
+        y -= 66f + 16f;
+        float half = (full - 14f) * 0.5f;
+        Button menu = MakeButton("ANA MENÜ", HudArt.HomeIcon, Pad + 6f, y, half, 57f, 22,
+            HudArt.CyanMid, new Color32(18, 46, 60, 255), (Color32)TextColor, GoToMainMenu);
         mainMenuButton = menu.gameObject;
-
-        Button quit = MakeButton(box.transform, "OYUNDAN ÇIK", new Vector2(300, 60), QuitGame);
+        Button quit = MakeButton("OYUNDAN ÇIK", HudArt.ExitIcon, Pad + 6f + half + 14f, y, half, 57f, 22,
+            new Color32(150, 40, 40, 255), new Color32(40, 14, 16, 255), (Color32)DangerText, QuitGame);
         quitButton = (RectTransform)quit.transform;
-        quitButton.anchoredPosition = new Vector2(0, y);
+        y -= 57f + Pad + 6f;
 
-        MakeText(box.transform, "Esc: kapat", 18, DimText, new Vector2(0, -405), new Vector2(660, 28), TextAlignmentOptions.Center);
-
+        box.sizeDelta = new Vector2(PanelW, -y);
         panelRoot.SetActive(false);
+    }
+
+    // ------------------------------------------------------------------ parçalar
+
+    private void Section(ref float y, string title, Sprite icon)
+    {
+        float hw = PanelW - 2 * Pad;
+        Image ic = Img(box, title + "Icon", icon, DimText, Pad + 6f, y + 8f, 18f, 16f);
+        ic.preserveAspect = true;
+        TMP_Text t = Text(box, title, 20, DimText, TextAlignmentOptions.MidlineLeft, Pad + 30f, y + 12f, 200f, 24f);
+        float tw = t.GetPreferredValues(title).x;
+        Img(box, title + "Line", HudArt.Solid, Divider, Pad + 40f + tw, y - 1f, hw - 46f - tw, 2f);
+        y -= 30f;
+    }
+
+    private void Row(ref float y, string label, string key, Func<float> get, Action<float> set, Action preview)
+    {
+        float hw = PanelW - 2 * Pad;
+        RectTransform row = NewRect(box, label + " Row");
+        Place(row, Pad, y + 6f, hw, 48f);
+        Image rowBg = row.gameObject.AddComponent<Image>();
+        rowBg.sprite = HudArt.Solid;
+        rowBg.color = new Color(RowHover.r, RowHover.g, RowHover.b, 0f);
+        Image hoverBar = Img(row, "HoverBar", HudArt.Solid, Amber, 0f, 0f, 5f, 48f);
+        hoverBar.gameObject.SetActive(false);
+
+        // susturma ikonu
+        RectTransform spk = NewRect(row, "Mute");
+        Place(spk, 16f, -10f, 30f, 27f);
+        Image spkImg = spk.gameObject.AddComponent<Image>();
+        spkImg.preserveAspect = true;
+        Button spkBtn = spk.gameObject.AddComponent<Button>();
+        spkBtn.targetGraphic = spkImg;
+        ColorBlock cb = spkBtn.colors; cb.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f); spkBtn.colors = cb;
+
+        TMP_Text lbl = Text(row, label, 24, TextColor, TextAlignmentOptions.MidlineLeft, 58f, 0f, 240f, 48f);
+        TMP_Text pct = Text(row, "", 24, Cyan, TextAlignmentOptions.MidlineRight, hw - 112f, 0f, 100f, 48f);
+
+        // hücreli sürgü: görünmez Slider + 10 hücre
+        const float cw = 18f, ch = 24f, gap = 5f;
+        float barX = 300f, barW = Cells * cw + (Cells - 1) * gap;
+        Image[] cells = new Image[Cells];
+        for (int i = 0; i < Cells; i++)
+            cells[i] = Img(row, "Cell" + i, HudArt.SettingCell(false), Color.white, barX + i * (cw + gap), -12f, cw, ch);
+
+        RectTransform sRt = NewRect(row, "Slider");
+        Place(sRt, barX - 4f, -6f, barW + 8f, 36f);
+        Image hit = sRt.gameObject.AddComponent<Image>();
+        hit.color = new Color(0, 0, 0, 0); // tıklama alanı
+        RectTransform fillArea = NewRect(sRt, "Fill Area");
+        fillArea.anchorMin = Vector2.zero; fillArea.anchorMax = Vector2.one; fillArea.offsetMin = new Vector2(4f, 0f); fillArea.offsetMax = new Vector2(-4f, 0f);
+        RectTransform fill = NewRect(fillArea, "Fill");
+        Image fillImg = fill.gameObject.AddComponent<Image>();
+        fillImg.color = new Color(0, 0, 0, 0);
+        fillImg.raycastTarget = false;
+        Slider s = sRt.gameObject.AddComponent<Slider>();
+        s.fillRect = fill;
+        s.targetGraphic = hit;
+        s.transition = Selectable.Transition.None;
+        s.direction = Slider.Direction.LeftToRight;
+        s.minValue = 0f; s.maxValue = 1f;
+
+        void Refresh(float v)
+        {
+            int on = Mathf.RoundToInt(v * Cells);
+            for (int i = 0; i < Cells; i++)
+            {
+                Sprite sp = HudArt.SettingCell(i < on);
+                if (cells[i].sprite != sp) cells[i].sprite = sp;
+            }
+            bool muted = v <= 0.001f;
+            pct.text = Mathf.RoundToInt(v * 100f) + "%";
+            pct.color = muted ? DimText : Cyan;
+            lbl.color = muted ? DimText : TextColor;
+            spkImg.sprite = muted ? HudArt.SpeakerMuteIcon : HudArt.SpeakerIcon;
+            spkImg.color = muted ? Color.white : Cyan;
+        }
+
+        float lastPreview = -1f;
+        s.SetValueWithoutNotify(get());
+        Refresh(get());
+        s.onValueChanged.AddListener(v =>
+        {
+            set(v);
+            Refresh(v);
+            if (preview != null && Time.unscaledTime - lastPreview > 0.2f)
+            {
+                lastPreview = Time.unscaledTime;
+                preview();
+            }
+        });
+
+        spkBtn.onClick.AddListener(() =>
+        {
+            float v = get();
+            if (v > 0.001f) { beforeMute[key] = v; s.value = 0f; }
+            else s.value = beforeMute.TryGetValue(key, out float old) && old > 0.001f ? old : 0.5f;
+            Sfx.Play("ui_click", 0.5f);
+        });
+
+        // satır vurgusu
+        EventTrigger et = row.gameObject.AddComponent<EventTrigger>();
+        AddTrigger(et, EventTriggerType.PointerEnter, () =>
+        {
+            rowBg.color = RowHover;
+            hoverBar.gameObject.SetActive(true);
+            Sfx.Play("ui_hover", 0.25f, 0.06f, 0.06f);
+        });
+        AddTrigger(et, EventTriggerType.PointerExit, () =>
+        {
+            rowBg.color = new Color(RowHover.r, RowHover.g, RowHover.b, 0f);
+            hoverBar.gameObject.SetActive(false);
+        });
+
+        y -= 56f;
+    }
+
+    private Button MakeButton(string label, Sprite icon, float x, float y, float w, float h, float fontSize,
+                              Color32 border, Color32 fill, Color32 textCol, UnityEngine.Events.UnityAction onClick)
+    {
+        RectTransform rt = NewRect(box, label);
+        Place(rt, x, y, w, h);
+        Image bg = rt.gameObject.AddComponent<Image>();
+        bg.sprite = HudArt.Panel(border, fill);
+        bg.type = Image.Type.Sliced;
+        Button b = rt.gameObject.AddComponent<Button>();
+        b.targetGraphic = bg;
+        ColorBlock cb = b.colors;
+        cb.normalColor = Color.white;
+        cb.highlightedColor = new Color(1.35f, 1.35f, 1.35f, 1f);
+        cb.pressedColor = new Color(0.75f, 0.75f, 0.75f, 1f);
+        cb.selectedColor = Color.white;
+        cb.fadeDuration = 0.06f;
+        b.colors = cb;
+        b.onClick.AddListener(onClick);
+
+        // ikon + yazı ortada, yan yana
+        RectTransform content = NewRect(rt, "Content");
+        content.anchorMin = Vector2.zero; content.anchorMax = Vector2.one; content.offsetMin = content.offsetMax = Vector2.zero;
+        HorizontalLayoutGroup hl = content.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hl.childAlignment = TextAnchor.MiddleCenter;
+        hl.spacing = 12f;
+        hl.childControlWidth = true; hl.childControlHeight = true;
+        hl.childForceExpandWidth = false; hl.childForceExpandHeight = false;
+
+        RectTransform ic = NewRect(content, "Icon");
+        Image icImg = ic.gameObject.AddComponent<Image>();
+        icImg.sprite = icon; icImg.color = textCol; icImg.preserveAspect = true; icImg.raycastTarget = false;
+        LayoutElement le = ic.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = 20f; le.preferredHeight = 22f;
+
+        TMP_Text t = Text(content, label, fontSize, (Color)textCol, TextAlignmentOptions.Center, 0f, 0f, 10f, 10f);
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+
+        HoverSound(rt.gameObject);
+        return b;
     }
 
     private void GoToMainMenu()
@@ -177,119 +390,72 @@ public class SettingsMenu : MonoBehaviour
 #endif
     }
 
-    private void MakeSlider(Transform parent, string label, float y, System.Func<float> get, System.Action<float> set, System.Action preview)
+    // ------------------------------------------------------------------ yardımcılar
+
+    private static RectTransform NewRect(Transform parent, string name)
     {
-        MakeText(parent, label, 26, TextColor, new Vector2(-160, y), new Vector2(280, 40), TextAlignmentOptions.Left);
-        TMP_Text pct = MakeText(parent, "", 24, Accent, new Vector2(285, y), new Vector2(80, 40), TextAlignmentOptions.Right);
-
-        GameObject sGo = new GameObject(label + " Slider", typeof(RectTransform), typeof(Slider));
-        sGo.transform.SetParent(parent, false);
-        RectTransform sr = (RectTransform)sGo.transform;
-        sr.sizeDelta = new Vector2(250, 22);
-        sr.anchoredPosition = new Vector2(115, y);
-
-        Image bg = NewImage(sGo.transform, "Background", new Color(0.2f, 0.24f, 0.26f, 1f));
-        Stretch(bg.rectTransform, 0, 4);
-
-        RectTransform fillArea = new GameObject("Fill Area", typeof(RectTransform)).GetComponent<RectTransform>();
-        fillArea.SetParent(sGo.transform, false);
-        Stretch(fillArea, 0, 4);
-        Image fill = NewImage(fillArea, "Fill", Accent);
-        Stretch(fill.rectTransform, 0, 0);
-
-        RectTransform handleArea = new GameObject("Handle Area", typeof(RectTransform)).GetComponent<RectTransform>();
-        handleArea.SetParent(sGo.transform, false);
-        Stretch(handleArea, 10, 0);
-        Image handle = NewImage(handleArea, "Handle", Color.white);
-        handle.rectTransform.sizeDelta = new Vector2(20, 0);
-        handle.rectTransform.anchorMin = new Vector2(0, 0);
-        handle.rectTransform.anchorMax = new Vector2(0, 1);
-
-        Slider s = sGo.GetComponent<Slider>();
-        s.fillRect = fill.rectTransform;
-        s.handleRect = handle.rectTransform;
-        s.targetGraphic = handle;
-        s.direction = Slider.Direction.LeftToRight;
-        s.minValue = 0f; s.maxValue = 1f;
-        s.SetValueWithoutNotify(get());
-        pct.text = Mathf.RoundToInt(get() * 100f) + "%";
-
-        float lastPreview = -1f;
-        s.onValueChanged.AddListener(v =>
-        {
-            set(v);
-            pct.text = Mathf.RoundToInt(v * 100f) + "%";
-            if (preview != null && Time.unscaledTime - lastPreview > 0.2f)
-            {
-                lastPreview = Time.unscaledTime;
-                preview();
-            }
-        });
+        GameObject go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        RectTransform rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        return rt;
     }
 
-    private static Image NewImage(Transform parent, string name, Color c)
+    /// <summary>Sol üst köşeye göre yerleşim (y aşağı doğru negatif).</summary>
+    private static void Place(RectTransform rt, float x, float y, float w, float h)
     {
-        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(parent, false);
-        Image img = go.GetComponent<Image>();
-        img.color = c;
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(x, y);
+        rt.sizeDelta = new Vector2(w, h);
+    }
+
+    private static Image Img(Transform parent, string name, Sprite sprite, Color color, float x, float y, float w, float h)
+    {
+        RectTransform rt = NewRect(parent, name);
+        Place(rt, x, y, w, h);
+        Image img = rt.gameObject.AddComponent<Image>();
+        img.sprite = sprite;
+        img.color = color;
+        img.raycastTarget = false;
         return img;
     }
 
-    private static void Stretch(RectTransform r, float padX, float padY)
+    private static TMP_Text Text(Transform parent, string text, float size, Color color, TextAlignmentOptions align,
+                                 float x, float y, float w, float h)
     {
-        r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one;
-        r.offsetMin = new Vector2(padX, padY); r.offsetMax = new Vector2(-padX, -padY);
-    }
-
-    private static TMP_Text MakeText(Transform parent, string text, float size, Color color, Vector2 pos, Vector2 box, TextAlignmentOptions align)
-    {
-        GameObject go = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
-        go.transform.SetParent(parent, false);
-        TextMeshProUGUI t = go.GetComponent<TextMeshProUGUI>();
+        RectTransform rt = NewRect(parent, "Text");
+        Place(rt, x, y, w, h);
+        TextMeshProUGUI t = rt.gameObject.AddComponent<TextMeshProUGUI>();
         RuntimeArt.ApplyPixelFont(t);
         t.text = text;
         t.fontSize = size;
         t.color = color;
         t.alignment = align;
         t.raycastTarget = false;
-        RectTransform r = t.rectTransform;
-        r.sizeDelta = box;
-        r.anchoredPosition = pos;
+        t.margin = Vector4.zero;
         return t;
     }
 
-    private static Button MakeButton(Transform parent, string label, Vector2 size, UnityEngine.Events.UnityAction onClick)
+    private static void HoverSound(GameObject go)
     {
-        GameObject go = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
-        go.transform.SetParent(parent, false);
-        ((RectTransform)go.transform).sizeDelta = size;
-        Image img = go.GetComponent<Image>();
-        img.color = ButtonColor;
-        Outline o = go.GetComponent<Outline>();
-        o.effectColor = new Color(Accent.r, Accent.g, Accent.b, 0.6f);
-        o.effectDistance = new Vector2(2, -2);
-        Button b = go.GetComponent<Button>();
-        ColorBlock cb = b.colors;
-        cb.highlightedColor = new Color(1.6f, 1.6f, 1.6f, 1f);
-        cb.pressedColor = new Color(0.7f, 0.7f, 0.7f, 1f);
-        b.colors = cb;
-        b.onClick.AddListener(onClick);
+        EventTrigger et = go.GetComponent<EventTrigger>();
+        if (et == null) et = go.AddComponent<EventTrigger>();
+        AddTrigger(et, EventTriggerType.PointerEnter, () => Sfx.Play("ui_hover", 0.3f));
+    }
 
-        TMP_Text t = MakeText(go.transform, label, 26, TextColor, Vector2.zero, size, TextAlignmentOptions.Center);
-        Stretch(t.rectTransform, 0, 0);
-
-        EventTrigger et = go.AddComponent<EventTrigger>();
-        EventTrigger.Entry enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-        enter.callback.AddListener(_ => Sfx.Play("ui_hover", 0.3f));
-        et.triggers.Add(enter);
-        return b;
+    private static void AddTrigger(EventTrigger et, EventTriggerType type, Action a)
+    {
+        EventTrigger.Entry e = new EventTrigger.Entry { eventID = type };
+        e.callback.AddListener(_ => a());
+        et.triggers.Add(e);
     }
 
     private static void EnsureEventSystem()
     {
         if (EventSystem.current != null) return;
-        if (Object.FindFirstObjectByType<EventSystem>() != null) return;
+        if (UnityEngine.Object.FindFirstObjectByType<EventSystem>() != null) return;
         new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
     }
 }
