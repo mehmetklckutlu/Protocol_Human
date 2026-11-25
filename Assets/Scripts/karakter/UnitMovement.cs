@@ -164,7 +164,8 @@ public class UnitMovement : MonoBehaviour
             if (active != null && active != myUnit) return;
             if (active == null && !myUnit.isMainDrone) return;
 
-            if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(clickedGridPos) && !FogOfWar.Instance.IsExplored(clickedGridPos))
+            if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(clickedGridPos) && !FogOfWar.Instance.IsExplored(clickedGridPos)
+                && !FogOfWar.Instance.IsHiddenEntrance(clickedGridPos))
                 return;
 
             Node clickedNode = GridManager.Instance.GetNode(clickedGridPos);

@@ -46,7 +46,7 @@ public class EnemyAI : MonoBehaviour
         if (TurnManager.Instance == null || GridManager.Instance == null) return;
 
         Vector2Int currentPos = GridManager.Instance.GetGridPosition(transform.position);
-        if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(currentPos)) return;
+        if (FogOfWar.Instance != null && !FogOfWar.Instance.IsSeenByPlayer(currentPos)) return;
 
         foreach (Unit target in TurnManager.Instance.playerUnits)
         {
