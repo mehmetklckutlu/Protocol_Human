@@ -527,7 +527,7 @@ MonoBehaviour:
     max: 17
   attackRange: 1
   targetMode: 0
-  visionRange: 15
+  visionRange: 10
   isAwake: 0
   obstacleLayer:
     serializedVersion: 2
