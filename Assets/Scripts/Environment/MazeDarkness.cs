@@ -146,9 +146,14 @@ public class MazeDarkness : MonoBehaviour
         lightRoutine = null;
     }
 
+    private bool dialogLocked = false;
+
     private IEnumerator Announce()
     {
         BuildUI();
+        // Işıklar sönüp konuşma bitene kadar drone olduğu yerde kalsın.
+        DialogState.Push();
+        dialogLocked = true;
         yield return new WaitForSeconds(lightOnDelay + 0.7f);
 
         boxRoot.SetActive(true);
@@ -179,7 +184,15 @@ public class MazeDarkness : MonoBehaviour
 
         yield return Fade(1f, 0f, 0.4f);
         boxRoot.SetActive(false);
+        ReleaseDialogLock();
         talkRoutine = null;
+    }
+
+    private void ReleaseDialogLock()
+    {
+        if (!dialogLocked) return;
+        dialogLocked = false;
+        DialogState.Pop();
     }
 
     private IEnumerator Fade(float from, float to, float dur)
@@ -216,6 +229,7 @@ public class MazeDarkness : MonoBehaviour
 
     private void OnDisable()
     {
+        ReleaseDialogLock();
         if (inside && FogOfWar.Instance != null)
             FogOfWar.Instance.SetDarkMode(false, zone, playerLightRadius, enemyLightRadius);
         inside = false;
@@ -237,7 +251,7 @@ public class MazeDarkness : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        // Haritaya tıklamayı engellemeyen, ekranın üst-ortasında duran konuşma kutusu.
+        // Ekranın sağında duran dikey konuşma kutusu (oyun alanının ortasını kapatmaz).
         boxRoot = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
         boxRoot.transform.SetParent(cgo.transform, false);
         Image bg = boxRoot.GetComponent<Image>();
@@ -251,18 +265,29 @@ public class MazeDarkness : MonoBehaviour
         boxGroup.interactable = false;
         boxGroup.alpha = 0f;
 
+        const float boxW = 440f, boxH = 360f;
         RectTransform br = boxRoot.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = new Vector2(0.5f, 1f);
-        br.pivot = new Vector2(0.5f, 1f);
-        br.anchoredPosition = new Vector2(0f, -150f);
-        br.sizeDelta = new Vector2(980f, 150f);
+        br.anchorMin = br.anchorMax = new Vector2(1f, 0.5f);
+        br.pivot = new Vector2(1f, 0.5f);
+        br.anchoredPosition = new Vector2(-24f, 30f);
+        br.sizeDelta = new Vector2(boxW, boxH);
 
-        TextMeshProUGUI sp = MakeText(boxRoot.transform, "Speaker", speaker, 22, Amber, TextAlignmentOptions.Left);
+        TextMeshProUGUI sp = MakeText(boxRoot.transform, "Speaker", speaker, 22, Amber, TextAlignmentOptions.MidlineLeft);
         sp.fontStyle = FontStyles.Bold;
-        Place(sp.rectTransform, new Vector2(0f, 48f), new Vector2(920f, 34f));
+        Place(sp.rectTransform, new Vector2(0f, boxH * 0.5f - 40f), new Vector2(boxW - 50f, 40f));
 
-        bodyText = MakeText(boxRoot.transform, "Body", "", 26, Color.white, TextAlignmentOptions.TopLeft);
-        Place(bodyText.rectTransform, new Vector2(0f, -18f), new Vector2(920f, 90f));
+        GameObject divider = new GameObject("Divider", typeof(RectTransform), typeof(Image));
+        divider.transform.SetParent(boxRoot.transform, false);
+        Image dv = divider.GetComponent<Image>();
+        dv.color = new Color(Amber.r, Amber.g, Amber.b, 0.45f);
+        dv.raycastTarget = false;
+        Place(dv.rectTransform, new Vector2(0f, boxH * 0.5f - 68f), new Vector2(boxW - 40f, 3f));
+
+        bodyText = MakeText(boxRoot.transform, "Body", "", 24, Color.white, TextAlignmentOptions.TopLeft);
+        bodyText.enableAutoSizing = true;
+        bodyText.fontSizeMin = 16f;
+        bodyText.fontSizeMax = 24f;
+        Place(bodyText.rectTransform, new Vector2(0f, -36f), new Vector2(boxW - 50f, boxH - 110f));
 
         boxRoot.SetActive(false);
     }

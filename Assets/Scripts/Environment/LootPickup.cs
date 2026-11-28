@@ -83,13 +83,14 @@ public class LootPickup : MonoBehaviour
     private void Collect(Unit by)
     {
         Sfx.Play("loot_pickup", 0.65f);
-        Vector3 pos = transform.position;
-        int line = 0;
+        // Toplanan her şey, hurda arama sonucuyla aynı HUD panelinde gösterilir.
+        int gotScrap = 0, gotCards = 0;
+        string extra = "";
 
         if (scrap > 0)
         {
             ScrapInventory.Add(scrap);
-            FloatingText.Spawn(pos, "+" + scrap + " hurda", new Color(1f, 0.9f, 0.3f), line++);
+            gotScrap = scrap;
             scrap = 0;
         }
 
@@ -99,8 +100,9 @@ public class LootPickup : MonoBehaviour
             if (c == null || CardManager.Instance == null) continue;
             if (!CardManager.Instance.AddCard(c)) { left.Add(c); continue; }
             bool isBp = c == blueprint;
-            FloatingText.Spawn(pos, (isBp ? "BLUEPRINT: " : "Kart: ") + c.cardName,
-                isBp ? new Color(0.5f, 0.8f, 1f) : new Color(0.6f, 1f, 0.6f), line++);
+            extra += isBp ? "\n<color=#59F2FF>Blueprint: " + c.cardName + "</color>"
+                          : "\n<color=#7CFF8A>Kart: " + c.cardName + "</color>";
+            gotCards++;
         }
 
         if (left.Count > 0)
@@ -108,9 +110,13 @@ public class LootPickup : MonoBehaviour
             cards = left;
             if (!cards.Contains(blueprint)) blueprint = null;
             blockedBy = by;
-            FloatingText.Spawn(pos, $"EL DOLU ({CardManager.Instance.MaxHandSize})\nkart yerde kaldı", new Color(1f, 0.55f, 0.3f), line);
-            return;
+            extra += "\n<color=#FF9A55>El dolu (" + CardManager.Instance.MaxHandSize + "), " + left.Count + " kart yerde kaldı</color>";
         }
+
+        if (gotScrap > 0 || gotCards > 0 || left.Count > 0)
+            ScrapUI.Instance.ShowLoot(gotScrap, gotCards, extra);
+
+        if (left.Count > 0) return;
 
         collected = true;
         Destroy(gameObject);

@@ -43,6 +43,7 @@ public class UnitMovement : MonoBehaviour
         if (TurnManager.Instance == null || GridManager.Instance == null || !myUnit.isPlayerOwned || myUnit.IsDead)
             return;
         if (SettingsMenu.IsOpen) return; // Ayarlar açıkken haritaya tıklanmasın
+        if (DialogState.Active) return;  // Konuşma bitene kadar drone hareket etmez
 
         bool inCombat = TurnManager.Instance.IsInCombat();
         bool isCardTargeting = CardManager.Instance != null && CardManager.Instance.IsTargeting;
@@ -261,6 +262,9 @@ public class UnitMovement : MonoBehaviour
 
         int i = 0;
         int stepsTaken = 0;
+        // Bu karede yürünebilecek mesafe. Bir kareye varınca artan mesafe bir sonraki kareye aktarılır;
+        // böylece her karede duraksama olmaz ve hız kare hızından bağımsız olarak sabit kalır.
+        float budget = 0f;
 
         while (i < path.Count)
         {
@@ -273,31 +277,48 @@ public class UnitMovement : MonoBehaviour
 
             CurrentGridPosition = node.gridPosition;
             Vector3 targetWorldPos = node.worldPosition;
+            targetWorldPos.z = targetWorldPos.y * 0.01f;
 
-            while (Vector2.Distance(new Vector2(transform.position.x, transform.position.y), new Vector2(targetWorldPos.x, targetWorldPos.y)) > 0.01f)
+            while (true)
             {
-                float step = moveSpeed * Time.deltaTime;
-                Vector3 newPos = Vector3.MoveTowards(transform.position, targetWorldPos, step);
-                newPos.z = newPos.y * 0.01f;
-                transform.position = newPos;
+                Vector3 pos = transform.position;
+                float dist = Vector2.Distance(new Vector2(pos.x, pos.y), new Vector2(targetWorldPos.x, targetWorldPos.y));
+                if (budget >= dist)
+                {
+                    budget -= dist;
+                    transform.position = targetWorldPos;
+                    break;
+                }
+                if (budget > 0f)
+                {
+                    Vector2 p2 = Vector2.MoveTowards(new Vector2(pos.x, pos.y), new Vector2(targetWorldPos.x, targetWorldPos.y), budget);
+                    transform.position = new Vector3(p2.x, p2.y, p2.y * 0.01f);
+                    budget = 0f;
+                }
                 yield return null;
+                budget += moveSpeed * Time.deltaTime;
             }
 
-            targetWorldPos.z = targetWorldPos.y * 0.01f;
-            transform.position = targetWorldPos;
             CurrentGridPosition = node.gridPosition;
             stepsTaken++;
             i++;
 
             if (!combatMove)
             {
-                if (FogOfWar.Instance != null) FogOfWar.Instance.Refresh();
-                yield return null;
-
+                // Sis, birimin karesi değişince kendi Update'inde zaten güncelleniyor. Burada Refresh() çağırmak
+                // her adımda bütün haritayı baştan hesaplatıp takılmaya yol açıyordu.
                 if (TurnManager.Instance != null && TurnManager.Instance.IsInCombat())
                 {
                     pendingArrivalAction = null;
                     myUnit.currentMovement = myUnit.maxMovement;
+                    break;
+                }
+
+                // Bir konuşma başladı (labirent girişi, tutorial...): drone bulunduğu karede durur.
+                if (DialogState.Active)
+                {
+                    pendingArrivalAction = null;
+                    pendingRedirectPath = null;
                     break;
                 }
 

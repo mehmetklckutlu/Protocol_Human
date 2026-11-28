@@ -22,6 +22,8 @@ public class HighlightManager : MonoBehaviour
 
     private readonly List<SpriteRenderer> pool = new List<SpriteRenderer>();
     private int used;
+    // Havuzun başındaki, nabız efekti almayan (menzil alanı) karo sayısı.
+    private int staticCount;
     private readonly HashSet<Vector2Int> rangeCells = new HashSet<Vector2Int>();
     private readonly HashSet<Vector2Int> targetCells = new HashSet<Vector2Int>();
 
@@ -65,30 +67,56 @@ public class HighlightManager : MonoBehaviour
     }
 
     /// <summary>Kartla vurulabilecek hedef karelerini gösterir.</summary>
-    public void ShowTargets(List<Node> nodes)
+    public void ShowTargets(List<Node> nodes) => ShowTargets(nodes, null);
+
+    /// <summary>
+    /// Kartla vurulabilecek hedefleri ve (verildiyse) kartın saldırı menzilini gösterir.
+    /// Menzil turuncu alan + dış çizgi olarak çizilir: "en fazla buraya kadar vurabilirsin".
+    /// </summary>
+    public void ShowTargets(List<Node> nodes, ICollection<Vector2Int> attackRange)
     {
         ClearHighlights();
-        if (nodes == null) return;
-        Sprite s = CursorArt.GetTargetTile();
-        foreach (Node n in nodes)
+
+        if (attackRange != null)
         {
-            if (n == null || !targetCells.Add(n.gridPosition)) continue;
-            Place(n.gridPosition, s, Color.white);
+            foreach (Vector2Int c in attackRange)
+            {
+                int mask = (attackRange.Contains(c + Vector2Int.up) ? 1 : 0)
+                         | (attackRange.Contains(c + Vector2Int.right) ? 2 : 0)
+                         | (attackRange.Contains(c + Vector2Int.down) ? 4 : 0)
+                         | (attackRange.Contains(c + Vector2Int.left) ? 8 : 0);
+                Place(c, CursorArt.GetAttackRangeTile(mask), Color.white, sortingOrder);
+            }
+        }
+        staticCount = used;
+
+        Sprite s = CursorArt.GetTargetTile();
+        if (nodes != null)
+        {
+            foreach (Node n in nodes)
+            {
+                if (n == null || !targetCells.Add(n.gridPosition)) continue;
+                Place(n.gridPosition, s, Color.white, sortingOrder + 1);
+            }
         }
         mode = Mode.Targets;
+        Version++;
     }
 
     public void ClearHighlights()
     {
         for (int i = 0; i < used; i++) pool[i].enabled = false;
         used = 0;
+        staticCount = 0;
         rangeCells.Clear();
         targetCells.Clear();
         mode = Mode.None;
         Version++;
     }
 
-    private void Place(Vector2Int cell, Sprite sprite, Color color)
+    private void Place(Vector2Int cell, Sprite sprite, Color color) => Place(cell, sprite, color, sortingOrder);
+
+    private void Place(Vector2Int cell, Sprite sprite, Color color, int order)
     {
         SpriteRenderer sr;
         if (used < pool.Count) sr = pool[used];
@@ -109,15 +137,16 @@ public class HighlightManager : MonoBehaviour
         sr.transform.localScale = new Vector3(size, size, 1f);
         sr.sprite = sprite;
         sr.color = color;
-        sr.sortingOrder = sortingOrder;
+        sr.sortingOrder = order;
         sr.enabled = true;
     }
 
     private void Update()
     {
-        if (mode != Mode.Targets || used == 0) return;
+        if (mode != Mode.Targets || used <= staticCount) return;
         float a = Mathf.Lerp(targetPulseMin, 1f, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * targetPulseSpeed));
         Color c = new Color(1f, 1f, 1f, a);
-        for (int i = 0; i < used; i++) pool[i].color = c;
+        // Sadece hedef kareleri nabız gibi atar; menzil alanı sabit kalır.
+        for (int i = staticCount; i < used; i++) pool[i].color = c;
     }
 }

@@ -580,14 +580,7 @@ public static class RuntimeArt
     {
         get
         {
-            if (cpuIcon == null)
-            {
-                cpuIcon = Resources.Load<Sprite>("Icons/CPU");
-#if UNITY_EDITOR
-                if (cpuIcon == null)
-                    cpuIcon = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Prefabs/Kaynaklar/CPU.png");
-#endif
-            }
+            if (cpuIcon == null) cpuIcon = LoadIcon("Icons/CPU", "Assets/Prefabs/Kaynaklar/CPU.png");
             return cpuIcon;
         }
     }
@@ -596,16 +589,30 @@ public static class RuntimeArt
     {
         get
         {
-            if (scrapIcon == null)
-            {
-                scrapIcon = Resources.Load<Sprite>("Icons/Hurda");
-#if UNITY_EDITOR
-                if (scrapIcon == null)
-                    scrapIcon = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Prefabs/Kaynaklar/Hurda.png");
-#endif
-            }
+            if (scrapIcon == null) scrapIcon = LoadIcon("Icons/Hurda", "Assets/Prefabs/Kaynaklar/Hurda.png");
             return scrapIcon;
         }
+    }
+
+    // İkon dokuları "Multiple" sprite modunda; tekil Load null dönebildiği için alt sprite'lardan ilki de denenir.
+    private static Sprite LoadIcon(string resourcesPath, string assetPath)
+    {
+        Sprite s = Resources.Load<Sprite>(resourcesPath);
+        if (s == null)
+        {
+            Sprite[] all = Resources.LoadAll<Sprite>(resourcesPath);
+            if (all != null && all.Length > 0) s = all[0];
+        }
+#if UNITY_EDITOR
+        if (s == null)
+        {
+            s = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+            if (s == null)
+                foreach (Object o in UnityEditor.AssetDatabase.LoadAllAssetsAtPath(assetPath))
+                    if (o is Sprite sp) { s = sp; break; }
+        }
+#endif
+        return s;
     }
 
     public static Sprite Star

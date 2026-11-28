@@ -98,6 +98,7 @@ public class TurnManager : MonoBehaviour
 
         if (Input.GetKeyDown(endTurnHotkey))
         {
+            if (DialogState.Active) return;
             GameObject dialog = GameObject.Find("Dialog");
             if (dialog != null && dialog.activeInHierarchy) return;
 
@@ -117,12 +118,19 @@ public class TurnManager : MonoBehaviour
         UpdateCombatState();
     }
 
+    // IsInCombat karede onlarca kez çağrılıyor (hurda yığınları, imleç, UI...); GetComponent'i her seferinde yapmamak için önbellek.
+    private readonly System.Collections.Generic.Dictionary<Unit, EnemyAI> aiCache = new System.Collections.Generic.Dictionary<Unit, EnemyAI>();
+
     public bool IsInCombat()
     {
         foreach (Unit enemy in enemyUnits)
         {
             if (enemy == null) continue;
-            EnemyAI ai = enemy.GetComponent<EnemyAI>();
+            if (!aiCache.TryGetValue(enemy, out EnemyAI ai) || ai == null)
+            {
+                ai = enemy.GetComponent<EnemyAI>();
+                aiCache[enemy] = ai;
+            }
             if (ai != null && ai.isAwake) return true;
         }
         return false;
@@ -306,6 +314,10 @@ public class TurnManager : MonoBehaviour
         {
             if (u.isMainDrone) CardManager.Instance.OnPlayerTurnStart();
             CardManager.Instance.SetActiveUnit(u);
+            // Aynı dost drone'un sırası arka arkaya gelince (arada ana drone oynamadan) SetActiveUnit
+            // eli yenilemiyordu; kartlar önceki turdaki "oynandı" haliyle kilitli kalıyor, drone ancak
+            // hareket edince (UI yenilenince) vurabiliyordu. Her tur başında eli yeniden çiz.
+            CardManager.Instance.RefreshUI();
         }
 
         if (TurnOrderUI.Instance != null) TurnOrderUI.Instance.SetActiveUnit(u);

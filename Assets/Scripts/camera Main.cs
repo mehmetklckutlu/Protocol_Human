@@ -78,7 +78,9 @@ public class TacticalCamera : MonoBehaviour
         }
     }
 
-    private void Update()
+    // LateUpdate: birimler Update/coroutine içinde hareket ettikten sonra kamera takip etsin.
+    // Update'te kalınca kamera bir kare geriden geliyor ve takip ederken görüntü titriyordu.
+    private void LateUpdate()
     {
         if (shakeOffset != Vector3.zero)
         {

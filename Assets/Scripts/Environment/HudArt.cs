@@ -213,8 +213,9 @@ public static class HudArt
         return s;
     }
 
-    public static Sprite ScrapIcon => Icon("scrap", ScrapRows);
-    public static Sprite ChipIcon => Icon("chip", ChipRows);
+    // Asıl ikonlar Assets/Prefabs/Kaynaklar içindeki Hurda.png ve CPU.png; bulunamazsa piksel çizim yedeği kullanılır.
+    public static Sprite ScrapIcon => RuntimeArt.ScrapIcon != null ? RuntimeArt.ScrapIcon : Icon("scrap", ScrapRows);
+    public static Sprite ChipIcon => RuntimeArt.CpuIcon != null ? RuntimeArt.CpuIcon : Icon("chip", ChipRows);
     public static Sprite CardIcon => Icon("card", CardRows);
 
     private static Sprite Icon(string key, string[] rows)

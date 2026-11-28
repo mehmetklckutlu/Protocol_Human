@@ -273,7 +273,7 @@ public class TutorialManager : MonoBehaviour
             if (GridManager.Instance != null)
             {
                 Node node = GridManager.Instance.GetNode(ToGrid(c));
-                if (node != null) node.isWalkable = true;
+                if (node != null) { node.isWalkable = true; node.isWall = false; }
             }
             center += CellWorld(c);
             n++;
@@ -308,6 +308,7 @@ public class TutorialManager : MonoBehaviour
     private IEnumerator Dialog(params string[] pages)
     {
         if (CardManager.Instance != null) CardManager.Instance.CancelTargeting();
+        DialogState.Push(); // konuşma bitene kadar drone hareket etmesin
         dialogRoot.SetActive(true);
         dialogSpeaker.text = Speaker;
         Sfx.Play("dialog_open", 0.5f);
@@ -344,6 +345,7 @@ public class TutorialManager : MonoBehaviour
         }
 
         dialogRoot.SetActive(false);
+        DialogState.Pop();
         yield return null;
     }
 
@@ -459,40 +461,53 @@ public class TutorialManager : MonoBehaviour
         scr.anchoredPosition = new Vector2(-24f, -134f);
         skipCornerBtn.onClick.AddListener(StartMission);
 
-        // Diyalog (ekranı karartır, haritaya tıklamayı engeller)
-        dialogRoot = MakePanel(cgo.transform, "Dialog", new Color(0f, 0f, 0f, 0.45f));
+        // Diyalog: ekranın sağında dikey bir kutu. Arkasındaki şeffaf katman haritaya ve kartlara
+        // tıklamayı engeller ama ekranı karartmaz; oyun alanı görünür kalır.
+        dialogRoot = MakePanel(cgo.transform, "Dialog", new Color(0f, 0f, 0f, 0f));
         Stretch(dialogRoot.GetComponent<RectTransform>());
 
+        const float boxW = 440f, boxH = 620f;
         GameObject box = MakePanel(dialogRoot.transform, "Box", new Color(0.03f, 0.1f, 0.14f, 0.96f));
         RectTransform br = box.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = new Vector2(0.5f, 0.5f);
-        br.anchoredPosition = new Vector2(0f, -10f);
-        br.sizeDelta = new Vector2(1080f, 380f);
+        br.anchorMin = br.anchorMax = new Vector2(1f, 0.5f);
+        br.pivot = new Vector2(1f, 0.5f);
+        br.anchoredPosition = new Vector2(-24f, 30f);
+        br.sizeDelta = new Vector2(boxW, boxH);
         AddOutline(box, Cyan);
 
+        // Üst: portre + konuşan
         GameObject portrait = MakePanel(box.transform, "Portrait", new Color(0.06f, 0.2f, 0.26f, 1f));
-        RectTransform pr = portrait.GetComponent<RectTransform>();
-        Place(pr, new Vector2(-430f, 30f), new Vector2(150f, 150f));
+        Place(portrait.GetComponent<RectTransform>(), new Vector2(-150f, 240f), new Vector2(96f, 96f));
         AddOutline(portrait, Cyan);
-        TextMeshProUGUI eye = MakeText(portrait.transform, "Eye", "PH", 64, Cyan, TextAlignmentOptions.Center);
-        Place(eye.rectTransform, Vector2.zero, new Vector2(150f, 150f));
+        TextMeshProUGUI eye = MakeText(portrait.transform, "Eye", "PH", 44, Cyan, TextAlignmentOptions.Center);
+        Place(eye.rectTransform, Vector2.zero, new Vector2(96f, 96f));
 
-        dialogSpeaker = MakeText(box.transform, "Speaker", Speaker, 24, Cyan, TextAlignmentOptions.Left);
+        dialogSpeaker = MakeText(box.transform, "Speaker", Speaker, 20, Cyan, TextAlignmentOptions.MidlineLeft);
         dialogSpeaker.fontStyle = FontStyles.Bold;
-        Place(dialogSpeaker.rectTransform, new Vector2(95f, 150f), new Vector2(820f, 40f));
+        Place(dialogSpeaker.rectTransform, new Vector2(58f, 240f), new Vector2(290f, 90f));
 
-        dialogBody = MakeText(box.transform, "Body", "", 27, Color.white, TextAlignmentOptions.TopLeft);
-        Place(dialogBody.rectTransform, new Vector2(95f, 10f), new Vector2(820f, 230f));
+        GameObject divider = MakePanel(box.transform, "Divider", new Color(Cyan.r, Cyan.g, Cyan.b, 0.45f));
+        divider.GetComponent<Image>().raycastTarget = false;
+        Place(divider.GetComponent<RectTransform>(), new Vector2(0f, 180f), new Vector2(boxW - 40f, 3f));
 
-        Button skipDialogBtn = MakeButton(box.transform, "EĞİTİMİ GEÇ", new Vector2(-140f, -145f), new Vector2(250f, 64f), out TextMeshProUGUI skipDialogLabel);
-        skipDialogLabel.color = new Color(1f, 0.82f, 0.45f);
-        skipDialogBtn.onClick.AddListener(StartMission);
+        // Orta: metin (uzun sayfalarda yazı kutuya sığacak kadar küçülür)
+        dialogBody = MakeText(box.transform, "Body", "", 24, Color.white, TextAlignmentOptions.TopLeft);
+        dialogBody.enableAutoSizing = true;
+        dialogBody.fontSizeMin = 16f;
+        dialogBody.fontSizeMax = 24f;
+        Place(dialogBody.rectTransform, new Vector2(0f, -10f), new Vector2(boxW - 50f, 360f));
 
-        Button next = MakeButton(box.transform, "DEVAM >>", new Vector2(370f, -145f), new Vector2(250f, 64f), out dialogButtonLabel);
+        // Alt: devam butonu tam genişlik, altında eğitimi geç + kısayol ipucu
+        Button next = MakeButton(box.transform, "DEVAM >>", new Vector2(0f, -232f), new Vector2(boxW - 50f, 58f), out dialogButtonLabel);
         next.onClick.AddListener(() => continuePressed = true);
 
-        TextMeshProUGUI hint = MakeText(box.transform, "Hint", "Boşluk / Enter", 18, new Color(0.6f, 0.75f, 0.8f), TextAlignmentOptions.Right);
-        Place(hint.rectTransform, new Vector2(120f, -145f), new Vector2(240f, 30f));
+        Button skipDialogBtn = MakeButton(box.transform, "EĞİTİMİ GEÇ", new Vector2(-95f, -286f), new Vector2(200f, 38f), out TextMeshProUGUI skipDialogLabel);
+        skipDialogLabel.color = new Color(1f, 0.82f, 0.45f);
+        skipDialogLabel.fontSize = 18f;
+        skipDialogBtn.onClick.AddListener(StartMission);
+
+        TextMeshProUGUI hint = MakeText(box.transform, "Hint", "Boşluk / Enter", 16, new Color(0.6f, 0.75f, 0.8f), TextAlignmentOptions.Right);
+        Place(hint.rectTransform, new Vector2(100f, -286f), new Vector2(180f, 30f));
 
         dialogRoot.SetActive(false);
     }

@@ -101,6 +101,7 @@ public class ScrapPile : MonoBehaviour
     {
         TurnManager tm = TurnManager.Instance;
         if (tm == null || tm.CurrentState != TurnState.PlayerTurn) return false;
+        if (DialogState.Active) return false;
         if (onlyOutOfCombat && tm.IsInCombat()) return false;
         return true;
     }
@@ -212,12 +213,12 @@ public class ScrapPile : MonoBehaviour
         Sfx.StopLoop(searchLoop, 0.2f);
         searchLoop = null;
         Sfx.Play("scrap_found", 0.65f);
-        string msg = "+" + scrapAmount + " hurda bulundu";
+        string extra = "";
 
         if (blueprints.Count > 0 && CardManager.Instance != null && Random.value < blueprintChance)
         {
             CardData bp = blueprints[Random.Range(0, blueprints.Count)];
-            if (bp != null) msg += GiveOrDrop(bp, true);
+            if (bp != null) extra += GiveOrDrop(bp, true);
         }
 
         Node n = gm.GetNode(PileCell);
@@ -227,7 +228,7 @@ public class ScrapPile : MonoBehaviour
 
         TurnManager.Instance.ClearBusy();
         ui.EndSearch();
-        ui.ShowResult(msg);
+        ui.ShowResult(scrapAmount, extra);
         Destroy(gameObject);
     }
 }

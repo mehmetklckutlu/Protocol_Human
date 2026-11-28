@@ -30,6 +30,8 @@ public class EnemyAI : MonoBehaviour
 
     private void Start()
     {
+        // Kontroller bütün düşmanlarda aynı karede yığılmasın.
+        nextWakeCheck = Time.time + Random.value * WakeCheckInterval;
         if (GridManager.Instance != null)
         {
             Vector2Int startGridPos = GridManager.Instance.GetGridPosition(transform.position);
@@ -39,11 +41,17 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    // Uyuyan düşmanlar oyuncuyu her karede değil, saniyede ~10 kez kontrol eder (çok düşmanlı bölgelerde takılmayı önler).
+    private const float WakeCheckInterval = 0.1f;
+    private float nextWakeCheck;
+
     private void Update()
     {
         if (isAwake) return;
 
         if (TurnManager.Instance == null || GridManager.Instance == null) return;
+        if (Time.time < nextWakeCheck) return;
+        nextWakeCheck = Time.time + WakeCheckInterval;
 
         Vector2Int currentPos = GridManager.Instance.GetGridPosition(transform.position);
         if (FogOfWar.Instance != null && !FogOfWar.Instance.IsSeenByPlayer(currentPos)) return;
@@ -82,6 +90,12 @@ public class EnemyAI : MonoBehaviour
     private int Dist(Vector2Int a, Vector2Int b)
     {
         return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
+    }
+
+    /// <summary>Hedef menzilde mi ve araya duvar girmiyor mu?</summary>
+    private bool CanHit(Vector2Int from, Vector2Int to)
+    {
+        return Dist(from, to) <= attackRange && GridManager.Instance.HasLineOfSight(from, to);
     }
 
     private Unit PickTarget()
@@ -181,9 +195,10 @@ public class EnemyAI : MonoBehaviour
 
             Vector2Int currentPos = GridManager.Instance.GetGridPosition(transform.position);
             Vector2Int targetPos = GridManager.Instance.GetGridPosition(target.transform.position);
-            int distanceToTarget = Dist(currentPos, targetPos);
+            // Menzilde olmak yetmez: araya duvar giriyorsa saldıramaz, görüş açısı bulana kadar yürür.
+            bool canHit = CanHit(currentPos, targetPos);
 
-            if (distanceToTarget <= attackRange && !hasAttackedThisTurn)
+            if (canHit && !hasAttackedThisTurn)
             {
                 Debug.Log($"<color=orange>{gameObject.name} SALDIRDI!</color>");
                 myUnit.UseCPU(1);
@@ -193,7 +208,7 @@ public class EnemyAI : MonoBehaviour
                 hasAttackedThisTurn = true;
                 yield return new WaitForSeconds(0.75f);
             }
-            else if (distanceToTarget > attackRange)
+            else if (!canHit)
             {
                 List<Node> path = FindPathToTarget(currentPos, targetPos);
                 if (path == null || path.Count == 0) break;
@@ -233,7 +248,7 @@ public class EnemyAI : MonoBehaviour
                     myUnit.UseMovement(1);
                     stepsMoved++;
 
-                    if (target != null && Dist(currentPos, targetPos) <= attackRange) break;
+                    if (target != null && CanHit(currentPos, targetPos)) break;
                 }
 
                 if (stepsMoved == 0) break;

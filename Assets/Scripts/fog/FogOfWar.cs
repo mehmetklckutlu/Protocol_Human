@@ -51,6 +51,12 @@ public class FogOfWar : MonoBehaviour
     [Tooltip("Açık: karanlıkta ışığın yumuşak kenarı, görünmeyen karelere (duvar arkasına) sızmaz.")]
     [SerializeField] private bool darkNoBleed = true;
 
+    [Header("Gizli Bölge Girişi (labirent)")]
+    [Tooltip("Labirent girişinde sisin kaç kare boyunca yavaşça kararacağı. 0 = eskisi gibi keskin kesilir.")]
+    [SerializeField, Range(0, 6)] private int entranceGlowDepth = 3;
+    [Tooltip("Girişin ilk karesindeki sis koyuluğu (0 = tamamen açık, 1 = tam siyah).")]
+    [SerializeField, Range(0f, 1f)] private float entranceGlowStart = 0.35f;
+
     private GridManager gm;
     private int w, h;
     private bool[] blocked;
@@ -93,6 +99,13 @@ public class FogOfWar : MonoBehaviour
     // Gizli bölge (labirent): dışarıdayken içi hiç görünmez, görüş sınırında kesilir.
     private bool hasHidden = false;
     private RectInt hiddenZone;
+    // Gizli bölge girişindeki yumuşak geçiş (kare indeksi -> hedef sis koyuluğu).
+    private Dictionary<int, float> entranceGlow = new Dictionary<int, float>();
+    private Dictionary<int, float> entranceGlowNext = new Dictionary<int, float>();
+    private readonly Dictionary<int, int> glowDepth = new Dictionary<int, int>();
+    private readonly Queue<int> glowQueue = new Queue<int>();
+    private static readonly int[] Dir4X = { 1, -1, 0, 0 };
+    private static readonly int[] Dir4Y = { 0, 0, 1, -1 };
     private int srcX, srcY, srcRadius;
     private bool srcIsPlayer;
     private byte plR, plG, plB, enR, enG, enB;
@@ -459,8 +472,15 @@ public class FogOfWar : MonoBehaviour
 
         for (int y = work.yMin; y < work.yMax; y++)
         for (int x = work.xMin; x < work.xMax; x++)
+            ApplyTarget(y * w + x);
+
+        UpdateEntranceGlow(box);
+    }
+
+    // Bir karenin hedef sis/ışık değerini görünürlüğe göre ayarlar.
+    private void ApplyTarget(int i)
+    {
         {
-            int i = y * w + x;
             if (visible[i]) explored[i] = true;
 
             float target, tp = 0f, te = 0f;
@@ -490,6 +510,97 @@ public class FogOfWar : MonoBehaviour
                 if (!inAnim[i]) { inAnim[i] = true; animating.Add(i); }
             }
         }
+    }
+
+    // Gizli bölgenin (labirent) girişi: dışarıdan görülen bir koridor gizli bölgeye girdiği yerde
+    // sis birden simsiyah kesilmesin; koridor birkaç kare boyunca yavaşça kararsın ki giriş belli olsun.
+    // Bu kareler "görünür" sayılmaz (içerideki düşmanlar gizli kalır), sadece sis biraz açılır.
+    private void UpdateEntranceGlow(RectInt box)
+    {
+        entranceGlowNext.Clear();
+
+        if (hasHidden && !darkMode && entranceGlowDepth > 0)
+        {
+            glowDepth.Clear();
+            glowQueue.Clear();
+            int x0 = Mathf.Max(0, box.xMin), y0 = Mathf.Max(0, box.yMin);
+            int x1 = Mathf.Min(w, box.xMax), y1 = Mathf.Min(h, box.yMax);
+
+            // Tohum: görünen (gizli olmayan) yürünebilir bir kareye bitişik, gizli bölgedeki yürünebilir kareler.
+            for (int y = y0; y < y1; y++)
+                for (int x = x0; x < x1; x++)
+                {
+                    int i = y * w + x;
+                    if (!visible[i] || blocked[i] || HiddenCell(x, y)) continue;
+                    for (int d = 0; d < 4; d++)
+                    {
+                        int nx = x + Dir4X[d], ny = y + Dir4Y[d];
+                        if (!InGrid(nx, ny) || !HiddenCell(nx, ny)) continue;
+                        int j = ny * w + nx;
+                        if (blocked[j] || glowDepth.ContainsKey(j)) continue;
+                        glowDepth[j] = 1;
+                        glowQueue.Enqueue(j);
+                    }
+                }
+
+            // Koridor boyunca içeri doğru yayıl.
+            while (glowQueue.Count > 0)
+            {
+                int i = glowQueue.Dequeue();
+                int dep = glowDepth[i];
+                if (dep >= entranceGlowDepth) continue;
+                int x = i % w, y = i / w;
+                for (int d = 0; d < 4; d++)
+                {
+                    int nx = x + Dir4X[d], ny = y + Dir4Y[d];
+                    if (!InGrid(nx, ny) || !HiddenCell(nx, ny)) continue;
+                    int j = ny * w + nx;
+                    if (blocked[j] || glowDepth.ContainsKey(j)) continue;
+                    glowDepth[j] = dep + 1;
+                    glowQueue.Enqueue(j);
+                }
+            }
+
+            foreach (KeyValuePair<int, int> kv in glowDepth)
+            {
+                float a = Mathf.Lerp(entranceGlowStart, unexploredAlpha, (kv.Value - 1) / (float)entranceGlowDepth);
+                AddGlow(kv.Key, a);
+
+                // Koridorun duvarları da aynı ölçüde seçilsin ki girişin şekli okunsun.
+                int x = kv.Key % w, y = kv.Key / w;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int nx = x + dx, ny = y + dy;
+                        if (!InGrid(nx, ny) || !HiddenCell(nx, ny)) continue;
+                        int j = ny * w + nx;
+                        if (blocked[j]) AddGlow(j, Mathf.Min(1f, a + 0.1f));
+                    }
+            }
+        }
+
+        // Artık parlamayan kareler normal hedeflerine döner.
+        foreach (KeyValuePair<int, float> kv in entranceGlow)
+            if (!entranceGlowNext.ContainsKey(kv.Key)) ApplyTarget(kv.Key);
+
+        foreach (KeyValuePair<int, float> kv in entranceGlowNext)
+        {
+            int i = kv.Key;
+            if (Mathf.Approximately(tgt[i], kv.Value) && tgtP[i] == 0f && tgtE[i] == 0f) continue;
+            tgt[i] = kv.Value;
+            tgtP[i] = 0f;
+            tgtE[i] = 0f;
+            if (!inAnim[i]) { inAnim[i] = true; animating.Add(i); }
+        }
+
+        Dictionary<int, float> tmp = entranceGlow;
+        entranceGlow = entranceGlowNext;
+        entranceGlowNext = tmp;
+    }
+
+    private void AddGlow(int i, float a)
+    {
+        if (!entranceGlowNext.TryGetValue(i, out float old) || a < old) entranceGlowNext[i] = a;
     }
 
     // Görülen duvar karesine komşu olan duvar kareleri de açılır.

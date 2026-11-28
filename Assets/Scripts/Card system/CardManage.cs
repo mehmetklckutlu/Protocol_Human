@@ -341,17 +341,22 @@ public class CardManager : MonoBehaviour
     {
         List<Unit> targets = GetTargetsInRange(card);
         List<ExplosiveBarrel> barrels = GetBarrelsInRange(card);
-        if (targets.Count == 0 && barrels.Count == 0)
-        {
-            Debug.Log("Menzilde hedef yok!");
-            Sfx.Play("card_deny", 0.6f);
-            NotifyHandChanged();
-            return;
-        }
 
+        // Menzilde hedef olmasa da kart seçilir ve menzil gösterilir; oyuncu nereye kadar vurabildiğini görür.
+        // Boş bir yere ya da sağ tıklayınca seçim iptal olur.
         pendingCard = card;
         pendingIndex = handIndex;
-        Sfx.Play("card_select", 0.6f);
+        if (targets.Count == 0 && barrels.Count == 0)
+        {
+            Sfx.Play("card_deny", 0.6f);
+            Unit attacker = GetActiveUnit();
+            if (attacker != null)
+                FloatingText.Spawn(attacker.transform.position, "MENZİLDE HEDEF YOK", new Color(1f, 0.6f, 0.3f), 1);
+        }
+        else
+        {
+            Sfx.Play("card_select", 0.6f);
+        }
 
         List<Node> nodes = new List<Node>();
         foreach (Unit t in targets)
@@ -364,8 +369,42 @@ public class CardManager : MonoBehaviour
             Node n = GridManager.Instance.GetNode(b.Cell);
             if (n != null) nodes.Add(n);
         }
-        HighlightManager.Instance.ShowTargets(nodes);
+        HighlightManager.Instance.ShowTargets(nodes, GetAttackRangeCells(card, nodes));
         NotifyHandChanged();
+    }
+
+    /// <summary>
+    /// Kartın vurabileceği bütün kareler (hedeflemeyle aynı kural: Manhattan mesafesi ≤ card.range ve görüş hattı).
+    /// Duvar kareleri ve duvar arkası çizilmez; hedeflerin durduğu kareler her zaman dahildir.
+    /// </summary>
+    private HashSet<Vector2Int> GetAttackRangeCells(CardData card, List<Node> targetNodes)
+    {
+        HashSet<Vector2Int> cells = new HashSet<Vector2Int>();
+        Unit attacker = GetActiveUnit();
+        if (attacker == null || card == null) return cells;
+
+        GridManager gm = GridManager.Instance;
+        Vector2Int from = gm.GetGridPosition(attacker.transform.position);
+        int r = Mathf.Max(0, card.range);
+
+        for (int dx = -r; dx <= r; dx++)
+        {
+            int span = r - Mathf.Abs(dx);
+            for (int dy = -span; dy <= span; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                Vector2Int c = new Vector2Int(from.x + dx, from.y + dy);
+                Node n = gm.GetNode(c);
+                if (n == null || !n.isWalkable) continue;
+                if (!gm.HasLineOfSight(from, c)) continue; // duvarın arkası menzile girmez
+                cells.Add(c);
+            }
+        }
+
+        if (targetNodes != null)
+            foreach (Node n in targetNodes)
+                if (n != null) cells.Add(n.gridPosition);
+        return cells;
     }
 
     private void Update()
@@ -567,7 +606,7 @@ public class CardManager : MonoBehaviour
             if (b == null) continue;
             if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(b.Cell)) continue;
             int dist = Mathf.Abs(from.x - b.Cell.x) + Mathf.Abs(from.y - b.Cell.y);
-            if (dist <= card.range) result.Add(b);
+            if (dist <= card.range && GridManager.Instance.HasLineOfSight(from, b.Cell)) result.Add(b);
         }
         return result;
     }
@@ -614,7 +653,8 @@ public class CardManager : MonoBehaviour
 
             if (FogOfWar.Instance != null && !FogOfWar.Instance.IsVisible(to)) continue;
             int dist = Mathf.Abs(from.x - to.x) + Mathf.Abs(from.y - to.y);
-            if (dist <= card.range) result.Add(enemy);
+            // Duvar arkasındaki düşman vurulamaz.
+            if (dist <= card.range && GridManager.Instance.HasLineOfSight(from, to)) result.Add(enemy);
         }
         return result;
     }

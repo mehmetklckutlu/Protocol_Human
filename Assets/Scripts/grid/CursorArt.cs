@@ -542,19 +542,27 @@ public static class CursorArt
     public static readonly Color32 TargetEdge = new Color32(255, 70, 60, 230);
 
     /// <summary>Hareket menzili karosu. mask: 1=yukarıda komşu, 2=sağda, 4=aşağıda, 8=solda. Komşusu olmayan kenara çizgi çekilir.</summary>
-    public static Sprite GetRangeTile(int mask)
+    public static Sprite GetRangeTile(int mask) => EdgeTile("range_", mask, RangeFill, RangeEdge);
+
+    public static readonly Color32 AttackRangeFill = new Color32(255, 120, 50, 30);
+    public static readonly Color32 AttackRangeEdge = new Color32(255, 120, 50, 210);
+
+    /// <summary>Saldırı kartının menzil alanı (turuncu). mask, GetRangeTile ile aynı.</summary>
+    public static Sprite GetAttackRangeTile(int mask) => EdgeTile("atkrange_", mask, AttackRangeFill, AttackRangeEdge);
+
+    private static Sprite EdgeTile(string prefix, int mask, Color32 fill, Color32 edge)
     {
-        string key = "range_" + mask;
+        string key = prefix + mask;
         if (spriteCache.TryGetValue(key, out Sprite s) && s != null) return s;
         Color32[] px = new Color32[32 * 32];
-        for (int i = 0; i < px.Length; i++) px[i] = RangeFill;
+        for (int i = 0; i < px.Length; i++) px[i] = fill;
         for (int i = 0; i < 32; i++)
         {
             // Unity dokusunda y=0 alt satırdır
-            if ((mask & 1) == 0) { px[31 * 32 + i] = RangeEdge; px[30 * 32 + i] = RangeEdge; }
-            if ((mask & 4) == 0) { px[0 * 32 + i] = RangeEdge; px[1 * 32 + i] = RangeEdge; }
-            if ((mask & 8) == 0) { px[i * 32 + 0] = RangeEdge; px[i * 32 + 1] = RangeEdge; }
-            if ((mask & 2) == 0) { px[i * 32 + 31] = RangeEdge; px[i * 32 + 30] = RangeEdge; }
+            if ((mask & 1) == 0) { px[31 * 32 + i] = edge; px[30 * 32 + i] = edge; }
+            if ((mask & 4) == 0) { px[0 * 32 + i] = edge; px[1 * 32 + i] = edge; }
+            if ((mask & 8) == 0) { px[i * 32 + 0] = edge; px[i * 32 + 1] = edge; }
+            if ((mask & 2) == 0) { px[i * 32 + 31] = edge; px[i * 32 + 30] = edge; }
         }
         s = ToSprite(FromPixels(px, 32), key);
         spriteCache[key] = s;

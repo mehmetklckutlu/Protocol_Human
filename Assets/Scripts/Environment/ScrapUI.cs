@@ -19,10 +19,27 @@ public class ScrapUI : MonoBehaviour
         }
     }
 
+    // Arama paneli ("HURDA ARANIYOR")
     private GameObject panel;
     private Image progressFill;
     private GameObject progressBar;
-    private TMP_Text resultText;
+    private TMP_Text searchTitle;
+    private TMP_Text searchPercent;
+    private RectTransform searchIcon;
+    private int lastDots = -1;
+    private int lastPercent = -1;
+
+    // Sonuç paneli ("HURDA BULUNDU")
+    private RectTransform resultBox;
+    private CanvasGroup resultGroup;
+    private TMP_Text resultLabel;
+    private TMP_Text resultAmount;
+    private TMP_Text resultExtra;
+    private float resultShownAt;
+    private const float ResultDuration = 3f;
+    private const float ResultFade = 0.5f;
+    private const float PanelW = 150f;   // sanat pikseli
+    private const float PanelH = 28f;
     // Hurda paneli
     private TMP_Text counterText;
     private TMP_Text scrapDeltaText;
@@ -41,7 +58,6 @@ public class ScrapUI : MonoBehaviour
     private int builtCellCount = -1;
     private const int MaxCells = 12;
     private bool busy;
-    private float resultHideTime;
 
     private void Awake()
     {
@@ -56,9 +72,8 @@ public class ScrapUI : MonoBehaviour
 
     private void Update()
     {
-        if (resultText != null && resultText.gameObject.activeSelf && Time.time > resultHideTime && !busy)
-            resultText.gameObject.SetActive(false);
-
+        UpdateSearchPanel();
+        UpdateResultPanel();
         UpdateCpuDisplay();
         UpdateScrapDelta();
     }
@@ -68,11 +83,22 @@ public class ScrapUI : MonoBehaviour
         busy = true;
         panel.SetActive(true);
         progressBar.SetActive(true);
-        progressFill.fillAmount = 0f;
-        resultText.gameObject.SetActive(false);
+        lastDots = -1;
+        lastPercent = -1;
+        SetProgress(0f);
+        resultBox.gameObject.SetActive(false);
     }
 
-    public void SetProgress(float t) { progressFill.fillAmount = t; }
+    public void SetProgress(float t)
+    {
+        progressFill.fillAmount = t;
+        int pct = Mathf.Clamp(Mathf.RoundToInt(t * 100f), 0, 100);
+        if (pct != lastPercent)
+        {
+            lastPercent = pct;
+            searchPercent.text = "%" + pct;
+        }
+    }
 
     public void EndSearch()
     {
@@ -81,12 +107,88 @@ public class ScrapUI : MonoBehaviour
         panel.SetActive(false);
     }
 
-    public void ShowResult(string text)
+    /// <summary>Arama sonucu: bulunan hurda miktarı ve (varsa) ek satırlar (blueprint, el dolu uyarısı...).</summary>
+    public void ShowResult(int scrapAmount, string extraLines)
     {
-        progressBar.SetActive(false);
-        resultText.text = text;
-        resultText.gameObject.SetActive(true);
-        resultHideTime = Time.time + 3f;
+        ShowResult("HURDA BULUNDU", "+" + scrapAmount, (Color)HudArt.Amber, extraLines);
+    }
+
+    /// <summary>
+    /// Yerden ganimet toplandı (düşman drone'larının bıraktığı hurda/kartlar). Arama sonucuyla aynı panel.
+    /// </summary>
+    public void ShowLoot(int scrapAmount, int cardCount, string extraLines)
+    {
+        string headline;
+        Color color;
+        if (scrapAmount > 0) { headline = "+" + scrapAmount; color = (Color)HudArt.Amber; }
+        else if (cardCount > 0) { headline = "+" + cardCount + " KART"; color = (Color)HudArt.Cyan; }
+        else { headline = "EL DOLU"; color = (Color)HudArt.Orange; }
+        ShowResult("GANİMET TOPLANDI", headline, color, extraLines);
+    }
+
+    public void ShowResult(string label, string headline, Color headlineColor, string extraLines)
+    {
+        if (busy) return;
+        resultLabel.text = label;
+        resultAmount.text = headline;
+        resultAmount.color = headlineColor;
+
+        string extra = string.IsNullOrEmpty(extraLines) ? "" : extraLines.Trim('\n');
+        float baseH = PanelH;
+        if (extra.Length > 0)
+        {
+            resultExtra.gameObject.SetActive(true);
+            resultExtra.text = extra;
+            float textW = (PanelW - 16f) * HudArt.Px;
+            float h = resultExtra.GetPreferredValues(extra, textW, 0f).y;
+            float hArt = Mathf.Ceil(h / HudArt.Px) + 2f;
+            resultExtra.rectTransform.sizeDelta = new Vector2(textW, hArt * HudArt.Px);
+            baseH += hArt + 2f;
+        }
+        else
+        {
+            resultExtra.gameObject.SetActive(false);
+        }
+        resultBox.sizeDelta = new Vector2(PanelW * HudArt.Px, baseH * HudArt.Px);
+
+        resultBox.gameObject.SetActive(true);
+        resultGroup.alpha = 1f;
+        resultBox.localScale = Vector3.one;
+        resultShownAt = Time.unscaledTime;
+    }
+
+    /// <summary>Eski çağrılar için: düz metin sonucu.</summary>
+    public void ShowResult(string text) { ShowResult("HURDA BULUNDU", "", (Color)HudArt.Amber, text); }
+
+    private void UpdateSearchPanel()
+    {
+        if (panel == null || !panel.activeSelf) return;
+
+        // Başlıkta dönen noktalar ve hafif zıplayan ikon: arama sürüyor hissi.
+        int dots = Mathf.FloorToInt(Time.unscaledTime * 3f) % 4;
+        if (dots != lastDots)
+        {
+            lastDots = dots;
+            searchTitle.text = "HURDA ARANIYOR" + new string('.', dots);
+        }
+        if (searchIcon != null)
+            searchIcon.anchoredPosition = new Vector2(6f * HudArt.Px,
+                -(7f + (Mathf.Repeat(Time.unscaledTime * 4f, 1f) < 0.5f ? 0f : 1f)) * HudArt.Px);
+    }
+
+    private void UpdateResultPanel()
+    {
+        if (resultBox == null || !resultBox.gameObject.activeSelf) return;
+        if (busy) { resultBox.gameObject.SetActive(false); return; }
+
+        float t = Time.unscaledTime - resultShownAt;
+        // Kısa bir "pop" ile açılır, sürenin sonunda yavaşça kaybolur.
+        float pop = Mathf.Clamp01(t / 0.15f);
+        resultBox.localScale = Vector3.one * Mathf.Lerp(1.12f, 1f, pop);
+
+        float left = ResultDuration - t;
+        if (left <= 0f) { resultBox.gameObject.SetActive(false); return; }
+        resultGroup.alpha = Mathf.Clamp01(left / ResultFade);
     }
 
     private void Build()
@@ -103,45 +205,76 @@ public class ScrapUI : MonoBehaviour
 
         BuildScrapPanel(canvasGo.transform);
         BuildCpuPanel(canvasGo.transform);
+        BuildSearchPanel(canvasGo.transform);
+        BuildResultPanel(canvasGo.transform);
+    }
 
-        panel = new GameObject("SearchPanel", typeof(RectTransform), typeof(Image));
-        panel.transform.SetParent(canvasGo.transform, false);
-        RectTransform pr = panel.GetComponent<RectTransform>();
+    /// <summary>Hurda sayacıyla aynı dil: amber çerçeveli kesik köşeli panel, ikon yuvası, piksel ilerleme çubuğu.</summary>
+    private void BuildSearchPanel(Transform canvas)
+    {
+        RectTransform pr = ArtRect(canvas, "SearchPanel", 0, 0, PanelW, PanelH);
         pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0f);
         pr.pivot = new Vector2(0.5f, 0f);
         pr.anchoredPosition = new Vector2(0f, 330f);
-        pr.sizeDelta = new Vector2(460f, 130f);
-        panel.GetComponent<Image>().color = new Color(0.06f, 0.09f, 0.12f, 0.92f);
+        panel = pr.gameObject;
+        Image bg = panel.AddComponent<Image>();
+        bg.sprite = HudArt.Panel(HudArt.AmberDark);
+        bg.type = Image.Type.Sliced;
+        bg.raycastTarget = false;
 
-        TMP_Text title = MakeText(panel.transform, "Title", 30, TextAlignmentOptions.Center);
-        title.text = "Hurda aranıyor...";
-        Place(title.rectTransform, 0.05f, 0.5f, 0.95f, 0.95f);
+        ArtImage(pr, "Accent", HudArt.Solid, (Color)HudArt.Cyan, 8, 1, 14, 1);
+        ArtImage(pr, "SocketEdge", HudArt.Solid, (Color)HudArt.Outline, 4, 5, 18, 18);
+        ArtImage(pr, "Socket", HudArt.Solid, (Color)HudArt.Socket, 5, 6, 16, 16);
+        searchIcon = ArtImage(pr, "ScrapIcon", HudArt.ScrapIcon, Color.white, 6, 7, 14, 14).rectTransform;
 
-        progressBar = new GameObject("Progress", typeof(RectTransform), typeof(Image));
-        progressBar.transform.SetParent(panel.transform, false);
-        Place(progressBar.GetComponent<RectTransform>(), 0.1f, 0.18f, 0.9f, 0.38f);
-        progressBar.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f);
-        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-        fill.transform.SetParent(progressBar.transform, false);
-        Place(fill.GetComponent<RectTransform>(), 0f, 0f, 1f, 1f);
-        progressFill = fill.GetComponent<Image>();
-        progressFill.color = new Color(0.4f, 0.95f, 0.5f);
-        progressFill.sprite = RuntimeArt.Square;
+        searchTitle = ArtText(pr, "Title", 18, (Color)HudArt.Amber, TextAlignmentOptions.MidlineLeft, 26, 4, 90, 9);
+        searchTitle.text = "HURDA ARANIYOR";
+        searchPercent = ArtText(pr, "Percent", 16, (Color)HudArt.Dim, TextAlignmentOptions.MidlineRight, 110, 4, 34, 9);
+
+        // Çubuk: koyu çerçeve + yuva + amber dolgu
+        RectTransform bar = ArtRect(pr, "Progress", 26, 15, 118, 9);
+        progressBar = bar.gameObject;
+        ArtImage(bar, "Edge", HudArt.Solid, (Color)HudArt.Outline, 0, 0, 118, 9);
+        ArtImage(bar, "Back", HudArt.Solid, (Color)HudArt.Socket, 1, 1, 116, 7);
+        progressFill = ArtImage(bar, "Fill", HudArt.Solid, (Color)HudArt.Amber, 1, 1, 116, 7);
         progressFill.type = Image.Type.Filled;
         progressFill.fillMethod = Image.FillMethod.Horizontal;
+        progressFill.fillOrigin = (int)Image.OriginHorizontal.Left;
         progressFill.fillAmount = 0f;
+        ArtImage(bar, "Shine", HudArt.Solid, new Color(1f, 1f, 1f, 0.18f), 1, 1, 116, 2);
         progressBar.SetActive(false);
 
-        resultText = MakeText(canvasGo.transform, "Result", 36, TextAlignmentOptions.Center);
-        RectTransform rr = resultText.rectTransform;
-        rr.anchorMin = rr.anchorMax = new Vector2(0.5f, 0f);
-        rr.pivot = new Vector2(0.5f, 0f);
-        rr.anchoredPosition = new Vector2(0f, 560f);
-        rr.sizeDelta = new Vector2(900f, 120f);
-        resultText.color = new Color(1f, 0.92f, 0.4f);
-        resultText.gameObject.SetActive(false);
-
         panel.SetActive(false);
+    }
+
+    private void BuildResultPanel(Transform canvas)
+    {
+        resultBox = ArtRect(canvas, "ResultPanel", 0, 0, PanelW, PanelH);
+        resultBox.anchorMin = resultBox.anchorMax = new Vector2(0.5f, 0f);
+        resultBox.pivot = new Vector2(0.5f, 0f);
+        resultBox.anchoredPosition = new Vector2(0f, 330f);
+        resultGroup = resultBox.gameObject.AddComponent<CanvasGroup>();
+        resultGroup.blocksRaycasts = false;
+        resultGroup.interactable = false;
+        Image bg = resultBox.gameObject.AddComponent<Image>();
+        bg.sprite = HudArt.Panel(HudArt.AmberDark);
+        bg.type = Image.Type.Sliced;
+        bg.raycastTarget = false;
+
+        ArtImage(resultBox, "Accent", HudArt.Solid, (Color)HudArt.Green, 8, 1, 14, 1);
+        ArtImage(resultBox, "SocketEdge", HudArt.Solid, (Color)HudArt.Outline, 4, 5, 18, 18);
+        ArtImage(resultBox, "Socket", HudArt.Solid, (Color)HudArt.Socket, 5, 6, 16, 16);
+        ArtImage(resultBox, "ScrapIcon", HudArt.ScrapIcon, Color.white, 6, 7, 14, 14);
+
+        resultLabel = ArtText(resultBox, "Label", 16, (Color)HudArt.Dim, TextAlignmentOptions.MidlineLeft, 26, 4, 110, 7);
+        resultLabel.text = "HURDA BULUNDU";
+        resultAmount = ArtText(resultBox, "Amount", 34, (Color)HudArt.Amber, TextAlignmentOptions.MidlineLeft, 26, 11, 110, 13);
+
+        resultExtra = ArtText(resultBox, "Extra", 18, (Color)HudArt.White, TextAlignmentOptions.TopLeft, 8, PanelH, PanelW - 16f, 9);
+        resultExtra.textWrappingMode = TextWrappingModes.Normal;
+        resultExtra.richText = true;
+
+        resultBox.gameObject.SetActive(false);
     }
 
     private static TMP_Text MakeText(Transform parent, string name, float size, TextAlignmentOptions align)
@@ -239,7 +372,8 @@ public class ScrapUI : MonoBehaviour
         bg.raycastTarget = false;
 
         ArtImage(cpuRect, "Accent", HudArt.Solid, (Color)HudArt.Cyan, 8, 1, 10, 1);
-        cpuIcon = ArtImage(cpuRect, "CpuIcon", HudArt.ChipIcon, Color.white, 5, 5, 9, 9);
+        cpuIcon = ArtImage(cpuRect, "CpuIcon", HudArt.ChipIcon, Color.white, 4, 3, 11, 11);
+        cpuIcon.preserveAspect = true;
         cpuLabel = ArtText(cpuRect, "Label", 15, (Color)HudArt.Dim, TextAlignmentOptions.Center, 1, 16, 17, 8);
         cpuLabel.text = "CPU";
 
