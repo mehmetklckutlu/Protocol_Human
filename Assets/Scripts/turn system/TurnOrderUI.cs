@@ -236,21 +236,27 @@ public class TurnOrderUI : MonoBehaviour
 
         // Banner
         RectTransform bn = NewRect(bar, "Banner");
-        bn.sizeDelta = new Vector2(196f, 62f);
+        bn.sizeDelta = new Vector2(214f, 62f);
         bannerBg = bn.gameObject.AddComponent<Image>();
         bannerBg.type = Image.Type.Sliced;
         bannerBg.raycastTarget = false;
-        bannerRound = Text(bn, "Round", 17, HudArt.Dim, TextAlignmentOptions.TopLeft);
-        Place(bannerRound.rectTransform, 14f, -6f, 160f, 22f);
-        bannerPhase = Text(bn, "Phase", 23, HudArt.Cyan, TextAlignmentOptions.TopLeft);
-        Place(bannerPhase.rectTransform, 14f, -28f, 180f, 28f);
+        bannerRound = Text(bn, "Round", 17, HudArt.Dim, TextAlignmentOptions.MidlineLeft);
+        Place(bannerRound.rectTransform, 16f, -6f, 182f, 20f);
+        // "DÜŞMAN SIRASI" panelin sağ kenarına taşıyordu: kutuya sığacak kadar küçülsün.
+        bannerPhase = Text(bn, "Phase", 23, HudArt.Cyan, TextAlignmentOptions.MidlineLeft);
+        Place(bannerPhase.rectTransform, 16f, -27f, 182f, 28f);
+        bannerPhase.textWrappingMode = TextWrappingModes.NoWrap;
+        bannerPhase.enableAutoSizing = true;
+        bannerPhase.fontSizeMax = 23f;
+        bannerPhase.fontSizeMin = 14f;
 
         sepText = Text(bar, "Sep", 26, HudArt.Dim, TextAlignmentOptions.Center);
         sepText.text = ">";
         sepText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         sepText.rectTransform.sizeDelta = new Vector2(20f, 30f);
 
-        endText = Text(bar, "End", 17, HudArt.Dim, TextAlignmentOptions.Left);
+        endText = Text(bar, "End", 17, HudArt.Dim, TextAlignmentOptions.MidlineLeft);
+        endText.textWrappingMode = TextWrappingModes.NoWrap;
         endText.text = "| TUR SONU";
         endText.rectTransform.pivot = new Vector2(0f, 0.5f);
         endText.rectTransform.sizeDelta = new Vector2(140f, 24f);
@@ -621,6 +627,13 @@ public class TurnOrderUI : MonoBehaviour
         tipLeft.text = left;
         tipRight.text = right;
         tipRight.richText = true;
+
+        // Satır sayısına göre kutu boyu: 3 satırlık bilgi (ör. SERSEM) panelin altından taşmasın.
+        int lines = Mathf.Max(left.Split('\n').Length, right.Split('\n').Length);
+        float textH = lines * 20f + 4f;
+        tipLeft.rectTransform.sizeDelta = new Vector2(tipLeft.rectTransform.sizeDelta.x, textH);
+        tipRight.rectTransform.sizeDelta = new Vector2(tipRight.rectTransform.sizeDelta.x, textH);
+        tooltip.sizeDelta = new Vector2(tooltip.sizeDelta.x, 36f + textH + 10f);
     }
 
     private static string UnitTitle(Unit u, DroneUnit d)

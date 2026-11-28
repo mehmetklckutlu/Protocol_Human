@@ -3,7 +3,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Ekranda bir konuşma (tutorial diyaloğu, labirent girişi konuşması...) açık mı?
-/// Açıkken oyuncu drone'u hareket ettirilemez, hurda aranamaz, tur bitirilemez.
+/// Açıkken drone hareket edebilir; sadece E kısayoluyla tur bitirilemez (Boşluk/Enter konuşmayı geçirir).
 /// Her konuşma açılırken Push, kapanırken Pop çağırır; sahne değişince sayaç sıfırlanır.
 /// </summary>
 public static class DialogState

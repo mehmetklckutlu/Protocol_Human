@@ -189,7 +189,8 @@ public class UnitWorldUI : MonoBehaviour
         ringGo.transform.localPosition = Vector3.zero;
         activeTurnRing = ringGo.AddComponent<SpriteRenderer>();
         activeTurnRing.sprite = RuntimeArt.Ring;
-        activeTurnRing.sortingOrder = 1;
+        // Drone sprite'ının (0) altında, zeminin (-5/-10) üstünde: halka drone'un üstüne filtre gibi binmesin.
+        activeTurnRing.sortingOrder = -1;
         activeTurnRing.enabled = false;
     }
 

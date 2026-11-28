@@ -100,9 +100,7 @@ public class ScrapPile : MonoBehaviour
     private bool CanSearchNow()
     {
         TurnManager tm = TurnManager.Instance;
-        if (tm == null || tm.CurrentState != TurnState.PlayerTurn) return false;
-        if (DialogState.Active) return false;
-        if (onlyOutOfCombat && tm.IsInCombat()) return false;
+        if (tm == null || tm.CurrentState != TurnState.PlayerTurn) return false;        if (onlyOutOfCombat && tm.IsInCombat()) return false;
         return true;
     }
 
@@ -223,6 +221,7 @@ public class ScrapPile : MonoBehaviour
 
         Node n = gm.GetNode(PileCell);
         if (n != null) n.isWalkable = true;
+        if (FogOfWar.Instance != null) FogOfWar.Instance.UpdateBlocker(PileCell);
         if (droppedCards.Count > 0)
             LootPickup.Spawn(gm.GetWorldPosition(PileCell), 0, droppedCards, droppedBlueprint);
 

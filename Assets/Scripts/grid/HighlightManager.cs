@@ -57,6 +57,10 @@ public class HighlightManager : MonoBehaviour
 
         foreach (Vector2Int c in rangeCells)
         {
+            // Birimin durduğu kareye karo çizilmez: camgöbeği dolgu drone'un üstüne filtre gibi biniyordu.
+            // (Kenar çizgisi hesabında kare yine menzil sayılır, çerçeve bozulmaz.)
+            if (GridManager.Instance != null && GridManager.Instance.IsCellOccupied(c)) continue;
+
             int mask = (rangeCells.Contains(c + Vector2Int.up) ? 1 : 0)
                      | (rangeCells.Contains(c + Vector2Int.right) ? 2 : 0)
                      | (rangeCells.Contains(c + Vector2Int.down) ? 4 : 0)

@@ -36,6 +36,9 @@ public class TurnManager : MonoBehaviour
         // Sahnelerde Turu Bitir butonu atanmamışsa adından bul; savaş dışında gizlenebilsin.
         if (endTurnButton == null) endTurnButton = GameObject.Find("EndTurn_Button");
         StyleEndTurnButton();
+        // Eski sahne yazıları hiç görünmesin (yerlerine HudBanner kullanılıyor).
+        if (enemyAlertUI != null) enemyAlertUI.SetActive(false);
+        if (roundEndUI != null) roundEndUI.SetActive(false);
         RuntimeArt.ApplyPixelFontToScene();
 
         foreach (Unit u in FindObjectsByType<Unit>(FindObjectsSortMode.None))
@@ -81,13 +84,27 @@ public class TurnManager : MonoBehaviour
         TMP_Text label = endTurnButton.GetComponentInChildren<TMP_Text>(true);
         if (label != null)
         {
+            // Yazı butonun içinde ortalı dursun: tek satır, butonu kenar boşluklarıyla doldurur,
+            // sığmazsa küçülür. Kısayol tuşu sağda küçük bir etiket olarak.
             RuntimeArt.ApplyPixelFont(label);
-            label.text = "TURU BİTİR >>\n<size=60%><color=#FFD264>[ E ]</color></size>";
-            label.fontSize = 22f;
+            RectTransform lr = label.rectTransform;
+            lr.anchorMin = Vector2.zero;
+            lr.anchorMax = Vector2.one;
+            lr.pivot = new Vector2(0.5f, 0.5f);
+            lr.offsetMin = new Vector2(14f, 6f);
+            lr.offsetMax = new Vector2(-14f, -6f);
+            lr.localScale = Vector3.one;
+            label.text = "TURU BİTİR  <size=70%><color=#FFD264>[E]</color></size>";
+            label.fontSize = 24f;
+            label.enableAutoSizing = true;
+            label.fontSizeMax = 24f;
+            label.fontSizeMin = 14f;
             label.fontStyle = FontStyles.Bold;
             label.color = new Color(0.85f, 0.98f, 1f, 1f);
             label.alignment = TextAlignmentOptions.Center;
-            label.lineSpacing = -8f;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.lineSpacing = 0f;
+            label.margin = Vector4.zero;
             label.raycastTarget = false;
         }
     }
@@ -203,23 +220,21 @@ public class TurnManager : MonoBehaviour
         return best;
     }
 
+    // Sahnedeki eski düz yazılar (sola yaslı, ortadan kaymış) yerine HUD temalı banner gösterilir.
     public IEnumerator ShowEnemyAlert()
     {
-        if (enemyAlertUI != null)
-        {
-            enemyAlertUI.SetActive(true);
-            yield return new WaitForSeconds(1.5f);
-            enemyAlertUI.SetActive(false);
-        }
+        if (enemyAlertUI != null) enemyAlertUI.SetActive(false);
+        HudBanner.Show("DÜŞMAN HAREKETİ", HudArt.Red, 1.5f, "Bir drone seni fark etti");
+        yield return new WaitForSeconds(1.5f);
     }
 
     private IEnumerator ShowRoundEndRoutine()
     {
-        if (roundEndUI != null && IsInCombat())
+        if (roundEndUI != null) roundEndUI.SetActive(false);
+        if (IsInCombat())
         {
-            roundEndUI.SetActive(true);
+            HudBanner.Show("TUR BİTTİ", HudArt.Amber, 1.5f);
             yield return new WaitForSeconds(1.5f);
-            roundEndUI.SetActive(false);
         }
     }
 

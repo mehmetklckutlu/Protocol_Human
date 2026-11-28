@@ -42,9 +42,7 @@ public class MazeDarkness : MonoBehaviour
     private Coroutine lightRoutine;
     private Coroutine talkRoutine;
 
-    private GameObject boxRoot;
-    private CanvasGroup boxGroup;
-    private TextMeshProUGUI bodyText;
+    private SubtitleBox subtitle;
 
     // ------------------------------------------------------------------ otomatik kurulum
 
@@ -146,75 +144,13 @@ public class MazeDarkness : MonoBehaviour
         lightRoutine = null;
     }
 
-    private bool dialogLocked = false;
-
+    // Konuşma ekranın altında alt yazı olarak akar; satırlar kendiliğinden geçer, ekrana tıklayınca hızlanır.
     private IEnumerator Announce()
     {
         BuildUI();
-        // Işıklar sönüp konuşma bitene kadar drone olduğu yerde kalsın.
-        DialogState.Push();
-        dialogLocked = true;
         yield return new WaitForSeconds(lightOnDelay + 0.7f);
-
-        boxRoot.SetActive(true);
-        Sfx.Play("dialog_open", 0.5f);
-        yield return Fade(0f, 1f, 0.2f);
-
-        foreach (string line in lines)
-        {
-            bodyText.text = line;
-            bodyText.ForceMeshUpdate();
-            int total = bodyText.textInfo.characterCount;
-            bodyText.maxVisibleCharacters = 0;
-
-            float t = 0f;
-            int shown = 0;
-            while (shown < total)
-            {
-                t += Time.deltaTime;
-                int prev = shown;
-                shown = charDelay <= 0f ? total : Mathf.Min(total, Mathf.FloorToInt(t / charDelay));
-                bodyText.maxVisibleCharacters = shown;
-                if (shown > prev) PlayVoiceFor(bodyText.textInfo, prev, shown);
-                yield return null;
-            }
-            bodyText.maxVisibleCharacters = 99999;
-            yield return new WaitForSeconds(lineHold);
-        }
-
-        yield return Fade(1f, 0f, 0.4f);
-        boxRoot.SetActive(false);
-        ReleaseDialogLock();
+        yield return subtitle.Play(speaker, Amber, lines, false, lineHold, charDelay, voicePitch);
         talkRoutine = null;
-    }
-
-    private void ReleaseDialogLock()
-    {
-        if (!dialogLocked) return;
-        dialogLocked = false;
-        DialogState.Pop();
-    }
-
-    private IEnumerator Fade(float from, float to, float dur)
-    {
-        for (float t = 0f; t < dur; t += Time.deltaTime)
-        {
-            boxGroup.alpha = Mathf.Lerp(from, to, t / dur);
-            yield return null;
-        }
-        boxGroup.alpha = to;
-    }
-
-    private void PlayVoiceFor(TMP_TextInfo info, int from, int to)
-    {
-        for (int c = from; c < to && c < info.characterCount; c++)
-        {
-            if (char.IsLetterOrDigit(info.characterInfo[c].character))
-            {
-                Sfx.Voice(voicePitch);
-                return;
-            }
-        }
     }
 
     private static Unit MainUnit()
@@ -229,7 +165,6 @@ public class MazeDarkness : MonoBehaviour
 
     private void OnDisable()
     {
-        ReleaseDialogLock();
         if (inside && FogOfWar.Instance != null)
             FogOfWar.Instance.SetDarkMode(false, zone, playerLightRadius, enemyLightRadius);
         inside = false;
@@ -239,7 +174,7 @@ public class MazeDarkness : MonoBehaviour
 
     private void BuildUI()
     {
-        if (boxRoot != null) return;
+        if (subtitle != null) return;
 
         GameObject cgo = new GameObject("MazeDarknessCanvas", typeof(Canvas), typeof(CanvasScaler));
         cgo.transform.SetParent(transform, false);
@@ -251,68 +186,8 @@ public class MazeDarkness : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        // Ekranın sağında duran dikey konuşma kutusu (oyun alanının ortasını kapatmaz).
-        boxRoot = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
-        boxRoot.transform.SetParent(cgo.transform, false);
-        Image bg = boxRoot.GetComponent<Image>();
-        bg.color = new Color(0.07f, 0.05f, 0.02f, 0.92f);
-        bg.raycastTarget = false;
-        Outline o = boxRoot.AddComponent<Outline>();
-        o.effectColor = new Color(Amber.r, Amber.g, Amber.b, 0.9f);
-        o.effectDistance = new Vector2(3f, -3f);
-        boxGroup = boxRoot.GetComponent<CanvasGroup>();
-        boxGroup.blocksRaycasts = false;
-        boxGroup.interactable = false;
-        boxGroup.alpha = 0f;
-
-        const float boxW = 440f, boxH = 360f;
-        RectTransform br = boxRoot.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = new Vector2(1f, 0.5f);
-        br.pivot = new Vector2(1f, 0.5f);
-        br.anchoredPosition = new Vector2(-24f, 30f);
-        br.sizeDelta = new Vector2(boxW, boxH);
-
-        TextMeshProUGUI sp = MakeText(boxRoot.transform, "Speaker", speaker, 22, Amber, TextAlignmentOptions.MidlineLeft);
-        sp.fontStyle = FontStyles.Bold;
-        Place(sp.rectTransform, new Vector2(0f, boxH * 0.5f - 40f), new Vector2(boxW - 50f, 40f));
-
-        GameObject divider = new GameObject("Divider", typeof(RectTransform), typeof(Image));
-        divider.transform.SetParent(boxRoot.transform, false);
-        Image dv = divider.GetComponent<Image>();
-        dv.color = new Color(Amber.r, Amber.g, Amber.b, 0.45f);
-        dv.raycastTarget = false;
-        Place(dv.rectTransform, new Vector2(0f, boxH * 0.5f - 68f), new Vector2(boxW - 40f, 3f));
-
-        bodyText = MakeText(boxRoot.transform, "Body", "", 24, Color.white, TextAlignmentOptions.TopLeft);
-        bodyText.enableAutoSizing = true;
-        bodyText.fontSizeMin = 16f;
-        bodyText.fontSizeMax = 24f;
-        Place(bodyText.rectTransform, new Vector2(0f, -36f), new Vector2(boxW - 50f, boxH - 110f));
-
-        boxRoot.SetActive(false);
-    }
-
-    private static TextMeshProUGUI MakeText(Transform parent, string name, string text, float size, Color color, TextAlignmentOptions align)
-    {
-        GameObject go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        TextMeshProUGUI t = go.AddComponent<TextMeshProUGUI>();
-        RuntimeArt.ApplyPixelFont(t);
-        t.text = text;
-        t.fontSize = size;
-        t.color = color;
-        t.alignment = align;
-        t.textWrappingMode = TextWrappingModes.Normal;
-        t.raycastTarget = false;
-        return t;
-    }
-
-    private static void Place(RectTransform r, Vector2 pos, Vector2 size)
-    {
-        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f);
-        r.pivot = new Vector2(0.5f, 0.5f);
-        r.anchoredPosition = pos;
-        r.sizeDelta = size;
+        // Ekranın altında alt yazı kutusu (HUD temasında, tıklamayı engellemez).
+        subtitle = SubtitleBox.Create(cgo.transform);
     }
 
     // ------------------------------------------------------------------ editör

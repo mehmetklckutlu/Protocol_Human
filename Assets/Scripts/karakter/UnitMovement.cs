@@ -43,8 +43,6 @@ public class UnitMovement : MonoBehaviour
         if (TurnManager.Instance == null || GridManager.Instance == null || !myUnit.isPlayerOwned || myUnit.IsDead)
             return;
         if (SettingsMenu.IsOpen) return; // Ayarlar açıkken haritaya tıklanmasın
-        if (DialogState.Active) return;  // Konuşma bitene kadar drone hareket etmez
-
         bool inCombat = TurnManager.Instance.IsInCombat();
         bool isCardTargeting = CardManager.Instance != null && CardManager.Instance.IsTargeting;
         bool blocksMapInput = CardManager.Instance != null && CardManager.Instance.BlocksMapInput;
@@ -313,15 +311,6 @@ public class UnitMovement : MonoBehaviour
                     myUnit.currentMovement = myUnit.maxMovement;
                     break;
                 }
-
-                // Bir konuşma başladı (labirent girişi, tutorial...): drone bulunduğu karede durur.
-                if (DialogState.Active)
-                {
-                    pendingArrivalAction = null;
-                    pendingRedirectPath = null;
-                    break;
-                }
-
                 if (pendingRedirectPath != null)
                 {
                     List<Node> nextPath = pendingRedirectPath;

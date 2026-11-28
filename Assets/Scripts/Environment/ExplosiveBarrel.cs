@@ -118,6 +118,8 @@ public class ExplosiveBarrel : MonoBehaviour
 
         Node n = gm.GetNode(Cell);
         if (n != null) n.isWalkable = true;
+        // Varil artık görüşü kesmesin: arkasındaki düşmanlar hemen görünsün.
+        if (FogOfWar.Instance != null) FogOfWar.Instance.UpdateBlocker(Cell);
 
         GameObject fx = new GameObject("BlastFx");
         fx.AddComponent<BlastFx>().Play(cells, gm, blastColor);

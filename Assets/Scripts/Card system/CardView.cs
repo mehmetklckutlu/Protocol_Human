@@ -84,6 +84,19 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     private bool isSummonCard;
     private float baseArcY;
     private float baseArcAngle;
+    // Balatro tarzı asimetri: her kart elde biraz farklı açı/yükseklikte durur ve hafifçe salınır.
+    private float jitterY, jitterAngle, swayPhase;
+    private int slotIndex;
+    private RectTransform hoverHitArea;
+
+    private const float FanMaxAngle = 8f;      // yelpazenin uçlarındaki kartların açısı
+    private const float FanMaxDrop = 26f;      // uçlardaki kartların ne kadar aşağıda durduğu (kavis)
+    private const float SwayAngle = 0.8f;      // boştayken salınım açısı
+    private const float SwayLift = 2f;         // boştayken salınım yüksekliği
+    private const float NeighborPush = 34f;    // hover'daki kartın komşuları bu kadar yana açılır
+    private const float MinHoverLift = 64f;    // hover'da kartın yükselişi (en az)
+    private const float MinHoverScale = 1.22f; // hover'da kartın büyümesi (en az)
+
     private float introTimer;
     private float introDelay;
     private bool builtVisuals;
@@ -307,6 +320,20 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
         overrideCanvas = visualRoot.gameObject.AddComponent<Canvas>();
         overrideCanvas.overrideSorting = false;
+
+        // Kart yukarı kalkınca fare kartın üst kısmına çıktığında hover kopmasın diye
+        // sadece hover sırasında yukarı doğru uzayan görünmez tıklama alanı.
+        GameObject hitGo = new GameObject("HoverHitArea", typeof(RectTransform), typeof(Image));
+        hitGo.transform.SetParent(transform, false);
+        hoverHitArea = hitGo.GetComponent<RectTransform>();
+        hoverHitArea.anchorMin = Vector2.zero;
+        hoverHitArea.anchorMax = Vector2.one;
+        hoverHitArea.offsetMin = Vector2.zero;
+        hoverHitArea.offsetMax = Vector2.zero;
+        Image hitImg = hitGo.GetComponent<Image>();
+        hitImg.color = new Color(0f, 0f, 0f, 0f);
+        hitImg.raycastTarget = true;
+        hitGo.SetActive(false);
     }
 
     /// <summary>Yeni kart görseli için ek katmanlar: ikon ışıması, tarama çizgisi, hologram, tip ikonu, açıklama satırları.</summary>
@@ -495,17 +522,27 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         EnsureEnhancedVisuals();
 
+        slotIndex = index;
         if (totalCount > 1)
         {
+            // Slay the Spire tarzı yelpaze: kartlar kavis üzerinde dizilir, uçlara doğru eğilip alçalır.
+            // Az kartta yelpaze daha dar açılır.
             float norm = (index - (totalCount - 1) * 0.5f) / Mathf.Max(1f, (totalCount - 1) * 0.5f);
-            baseArcY = -Mathf.Abs(norm) * 8f;
-            baseArcAngle = -norm * 3.5f;
+            float spread = Mathf.Clamp01((totalCount - 1) / 6f);
+            baseArcY = -norm * norm * FanMaxDrop * spread;
+            baseArcAngle = -norm * FanMaxAngle * spread;
         }
         else
         {
             baseArcY = 0f;
             baseArcAngle = 0f;
         }
+
+        // Kart başına sabit küçük sapma (her yeniden çizimde aynı kalsın diye sıra numarasından üretilir).
+        System.Random rng = new System.Random(index * 7919 + totalCount * 131 + 17);
+        jitterAngle = (float)(rng.NextDouble() * 2.0 - 1.0) * 1.6f;
+        jitterY = (float)(rng.NextDouble() * 2.0 - 1.0) * 4f;
+        swayPhase = (float)(rng.NextDouble() * Mathf.PI * 2.0);
 
         if (playIntro)
         {
@@ -731,9 +768,19 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
         introTimer = Mathf.Min(1f, introTimer + dt * 5f);
 
-        float targetY = baseArcY;
+        float sway = Mathf.Sin(Time.unscaledTime * 1.3f + swayPhase);
+        float targetX = 0f;
+        float targetY = baseArcY + jitterY + sway * SwayLift;
         float targetScale = 1f;
-        float targetAngle = baseArcAngle;
+        float targetAngle = baseArcAngle + jitterAngle + sway * SwayAngle;
+
+        // Elde başka bir kartın üstüne gelinince komşular yana açılır (yakın olan daha çok).
+        if (!hovered && !isSelected && hoveredView != null && hoveredView != this &&
+            hoveredView.transform.parent == transform.parent)
+        {
+            int d = slotIndex - hoveredView.slotIndex;
+            if (d != 0) targetX = Mathf.Sign(d) * NeighborPush / Mathf.Abs(d);
+        }
         Color targetBorder = new Color(0.03f, 0.05f, 0.08f, 0.55f);
 
         if (!isInteractable && !isSelected)
@@ -752,15 +799,18 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
         }
         else if (hovered)
         {
-            targetY = hoverLift;
-            targetScale = pressed ? hoverScale * 0.94f : hoverScale;
+            // Üstüne gelinen kart dikleşir, yukarı çıkar ve hafifçe büyür.
+            float lift = Mathf.Max(hoverLift, MinHoverLift);
+            float scale = Mathf.Max(hoverScale, MinHoverScale);
+            targetY = lift;
+            targetScale = pressed ? scale * 0.94f : scale;
             targetAngle = 0f;
             targetBorder = (isInteractable && !cardShort)
                 ? (isSummonCard ? (Color)CardArt.Orange : (Color)CardArt.Lt(typeBase, 0.6f))
                 : new Color(0.95f, 0.35f, 0.35f, 0.9f);
         }
 
-        visualRoot.anchoredPosition = Vector2.Lerp(visualRoot.anchoredPosition, new Vector2(0f, targetY), dt * animSpeed);
+        visualRoot.anchoredPosition = Vector2.Lerp(visualRoot.anchoredPosition, new Vector2(targetX, targetY), dt * animSpeed);
         visualRoot.localScale = Vector3.Lerp(visualRoot.localScale, Vector3.one * targetScale, dt * animSpeed);
         visualRoot.localRotation = Quaternion.Lerp(visualRoot.localRotation, Quaternion.Euler(0f, 0f, targetAngle), dt * animSpeed);
 
@@ -825,6 +875,12 @@ public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     private void UpdateSortingOrder()
     {
+        if (hoverHitArea != null)
+        {
+            bool extend = hovered || isSelected;
+            hoverHitArea.gameObject.SetActive(extend);
+            if (extend) hoverHitArea.offsetMax = new Vector2(0f, Mathf.Max(hoverLift, MinHoverLift) + 20f);
+        }
         if (overrideCanvas == null) return;
         bool bringToFront = hovered || isSelected;
         overrideCanvas.overrideSorting = bringToFront;

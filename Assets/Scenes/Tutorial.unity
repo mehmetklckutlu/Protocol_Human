@@ -8322,6 +8322,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HighlightManager
   highlightPrefab: {fileID: 8331770365860352924, guid: 9b83f3eb076f73d4b8ffbde7aecfb816, type: 3}
+  sortingOrder: 2
+  targetPulseMin: 0.55
+  targetPulseSpeed: 4
 --- !u!1 &326287105
 GameObject:
   m_ObjectHideFlags: 0
@@ -8359,7 +8362,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.12887149, g: 0.137455, b: 0.1509434, a: 0}
+  m_BackGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -10078,8 +10081,10 @@ MonoBehaviour:
   handRoot: {fileID: 2024505805}
   container: {fileID: 2024505807}
   cardPrefab: {fileID: 3294872914030700062, guid: 574f9382eedccb14bb35de2899f7a6d9, type: 3}
-  preferredSpacing: 12
   sideMargin: 270
+  cardScale: 1.3
+  overlap: 0.78
+  bottomLift: 44
 --- !u!1 &1165805061
 GameObject:
   m_ObjectHideFlags: 0
@@ -10464,6 +10469,15 @@ MonoBehaviour:
   outsideCoverSize: 500
   subdivisions: 4
   smoothEdges: 1
+  playerLightColor: {r: 1, g: 0.8, b: 0.35, a: 1}
+  enemyLightColor: {r: 1, g: 0.32, b: 0.22, a: 1}
+  darkCenterAlpha: 0.1
+  darkTintStrength: 0.6
+  darkFalloff: 1.5
+  darkWallRevealDepth: 0
+  darkNoBleed: 1
+  entranceGlowDepth: 3
+  entranceGlowStart: 0.35
 --- !u!4 &1289695598
 Transform:
   m_ObjectHideFlags: 0
@@ -10541,6 +10555,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 03df414df2c21974aa793c5054bdad82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GridCursor
+  sortingOrder: 12
+  osCursorScale: 0
+  waitFps: 12
+  pulseAmount: 0.05
+  pulseSpeed: 5
 --- !u!212 &1398056647
 SpriteRenderer:
   serializedVersion: 2
@@ -29782,6 +29801,9 @@ MonoBehaviour:
   activeUnitFrame: {fileID: 0}
   playerColor: {r: 0, g: 1, b: 0, a: 1}
   enemyColor: {r: 1, g: 0, b: 0, a: 1}
+  maxUpcoming: 8
+  maxActedShown: 3
+  topMargin: 14
 --- !u!114 &1510629270
 MonoBehaviour:
   m_ObjectHideFlags: 0

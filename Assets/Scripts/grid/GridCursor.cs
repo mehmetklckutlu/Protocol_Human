@@ -120,9 +120,7 @@ public class GridCursor : MonoBehaviour
         if (cm != null) k = k * 31 + (cm.IsTargeting ? 1 : 0);
         if (HighlightManager.Instance != null) k = k * 31 + HighlightManager.Instance.Version;
         k = k * 31 + (PointerOverUI() ? 1 : 0);
-        k = k * 31 + (SettingsMenu.IsOpen ? 1 : 0);
-        k = k * 31 + (DialogState.Active ? 1 : 0);
-        return k;
+        k = k * 31 + (SettingsMenu.IsOpen ? 1 : 0);        return k;
     }
 
     private static bool PointerOverUI()
@@ -144,7 +142,7 @@ public class GridCursor : MonoBehaviour
         HighlightManager hm = HighlightManager.Instance;
 
         // Menü, ayarlar, oyun sonu, UI üstü
-        if (SettingsMenu.IsOpen || DialogState.Active || PointerOverUI() || (tm != null && tm.IsGameOver))
+        if (SettingsMenu.IsOpen || PointerOverUI() || (tm != null && tm.IsGameOver))
         {
             Set(null, "default");
             return;

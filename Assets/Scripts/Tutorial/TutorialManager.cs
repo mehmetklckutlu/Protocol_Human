@@ -52,14 +52,10 @@ public class TutorialManager : MonoBehaviour
     private static readonly Color Green = new Color(0.45f, 1f, 0.55f);
 
     private Canvas canvas;
-    private GameObject dialogRoot;
-    private TextMeshProUGUI dialogSpeaker;
-    private TextMeshProUGUI dialogBody;
-    private TextMeshProUGUI dialogButtonLabel;
+    private SubtitleBox subtitle;
     private GameObject objectiveRoot;
     private TextMeshProUGUI objectiveTitle;
     private TextMeshProUGUI objectiveText;
-    private bool continuePressed;
 
     private readonly List<SpriteRenderer> markers = new List<SpriteRenderer>();
     private readonly Dictionary<int, List<SpriteRenderer>> gateLocks = new Dictionary<int, List<SpriteRenderer>>();
@@ -297,70 +293,20 @@ public class TutorialManager : MonoBehaviour
             c.a = pulse;
             sr.color = c;
         }
-
-        if (dialogRoot != null && dialogRoot.activeSelf &&
-            (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
-            continuePressed = true;
     }
 
     // ------------------------------------------------------------------ diyalog
 
+    // Konuşma ekranın altında alt yazı olarak akar; drone bu sırada hareket edebilir.
+    // Ekrana tıklamak (ya da Boşluk/Enter) yazıyı tamamlar / sonraki sayfaya geçer.
     private IEnumerator Dialog(params string[] pages)
     {
         if (CardManager.Instance != null) CardManager.Instance.CancelTargeting();
-        DialogState.Push(); // konuşma bitene kadar drone hareket etmesin
-        dialogRoot.SetActive(true);
-        dialogSpeaker.text = Speaker;
-        Sfx.Play("dialog_open", 0.5f);
-
-        for (int i = 0; i < pages.Length; i++)
+        yield return subtitle.Play(Speaker, Cyan, pages, true, 0f, charDelay, voicePitch, page =>
         {
-            dialogButtonLabel.text = i < pages.Length - 1 ? "DEVAM >>" : "TAMAM >>";
-            dialogBody.text = pages[i];
-            dialogBody.ForceMeshUpdate();
-            int total = dialogBody.textInfo.characterCount;
-            dialogBody.maxVisibleCharacters = 0;
-            continuePressed = false;
-            if (pages[i].Contains("DOĞRULANDI")) Sfx.Play("test_passed", 0.7f, 0f, 0.3f);
-
-            float t = 0f;
-            int shown = 0;
-            while (shown < total)
-            {
-                if (continuePressed) { continuePressed = false; break; }
-                t += Time.unscaledDeltaTime;
-                int prev = shown;
-                shown = charDelay <= 0f ? total : Mathf.Min(total, Mathf.FloorToInt(t / charDelay));
-                dialogBody.maxVisibleCharacters = shown;
-                if (shown > prev) PlayVoiceFor(dialogBody.textInfo, prev, shown);
-                yield return null;
-            }
-            dialogBody.maxVisibleCharacters = 99999;
-
-            yield return null;
-            continuePressed = false;
-            yield return new WaitUntil(() => continuePressed);
-            continuePressed = false;
-            Sfx.Play("ui_click", 0.45f);
-        }
-
-        dialogRoot.SetActive(false);
-        DialogState.Pop();
+            if (page.Contains("DOĞRULANDI")) Sfx.Play("test_passed", 0.7f, 0f, 0.3f);
+        });
         yield return null;
-    }
-
-    // Robot konuşma sesi: yeni görünen harflerden biri harf/rakamsa kısa bir bip çalar
-    // (Sfx.Voice kendi içinde hızı sınırlar, böylece konuşma gibi ritmik duyulur).
-    private void PlayVoiceFor(TMP_TextInfo info, int from, int to)
-    {
-        for (int c = from; c < to && c < info.characterCount; c++)
-        {
-            if (char.IsLetterOrDigit(info.characterInfo[c].character))
-            {
-                Sfx.Voice(voicePitch);
-                return;
-            }
-        }
     }
 
     private void SetObjective(string title, string text)
@@ -373,31 +319,44 @@ public class TutorialManager : MonoBehaviour
     private void ShowFinalScreen()
     {
         Sfx.Play("mission_ready", 0.8f, 0f, 1f);
-        GameObject root = MakePanel(canvas.transform, "TestComplete", new Color(0f, 0.02f, 0.04f, 0.9f));
-        Stretch(root.GetComponent<RectTransform>());
 
-        GameObject frame = MakePanel(root.transform, "Frame", new Color(0.03f, 0.1f, 0.14f, 0.97f));
-        RectTransform fr = frame.GetComponent<RectTransform>();
-        fr.anchorMin = fr.anchorMax = new Vector2(0.5f, 0.5f);
-        fr.sizeDelta = new Vector2(1180f, 640f);
-        AddOutline(frame, Green);
+        // Arka planı karartan katman (tıklamayı da tutar)
+        GameObject root = new GameObject("TestComplete", typeof(RectTransform), typeof(Image));
+        root.transform.SetParent(canvas.transform, false);
+        HudUI.Stretch((RectTransform)root.transform);
+        root.GetComponent<Image>().color = new Color(0f, 0.02f, 0.04f, 0.85f);
 
-        TextMeshProUGUI title = MakeText(frame.transform, "Title", "TEST PROTOKOLÜ TAMAMLANDI", 64, Green, TextAlignmentOptions.Center);
-        Place(title.rectTransform, new Vector2(0f, 220f), new Vector2(1100f, 90f));
+        // HUD temalı pencere
+        Image frame = HudUI.Panel(root.transform, "Frame", new Color32(40, 150, 80, 255));
+        frame.raycastTarget = true;
+        HudUI.Place(frame.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980f, 560f));
+        HudUI.Accent(frame.transform, (Color)HudArt.Green, 120f);
+
+        TMP_Text title = HudUI.Text(frame.transform, "Title", "TEST PROTOKOLÜ TAMAMLANDI", 52, (Color)HudArt.Green,
+                                    TextAlignmentOptions.Center, 30f);
         title.fontStyle = FontStyles.Bold;
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+        HudUI.Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(900f, 70f));
 
-        TextMeshProUGUI body = MakeText(frame.transform, "Body",
+        Image line = HudUI.Panel(frame.transform, "Line", new Color32(40, 150, 80, 255));
+        line.sprite = HudArt.Solid;
+        line.type = Image.Type.Simple;
+        line.color = new Color(HudArt.Green.r / 255f, HudArt.Green.g / 255f, HudArt.Green.b / 255f, 0.45f);
+        HudUI.Place(line.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -118f), new Vector2(880f, 3f));
+
+        TMP_Text body = HudUI.Text(frame.transform, "Body",
             "PH-01 tüm test aşamalarını başarıyla geçti.\n\n" +
-            "Hareket · Hurda Toplama · Savaş · Savunma · Çevre Kullanımı · Destek Drone\n" +
+            "<color=#78A0AA>Hareket · Hurda Toplama · Savaş · Savunma · Çevre Kullanımı · Destek Drone</color>\n" +
             "<color=#7CFF8A>DOĞRULANDI</color>\n\n" +
             "Durum: <b><color=#7CFF8A>GÖREVE HAZIR</color></b>\n\n" +
             "Görev: İnsanlığa ait verileri bul ve kurtar.\n" +
             "<i>İyi şanslar, PH-01. İnsanlığın hafızası artık sana emanet.</i>",
-            30, Color.white, TextAlignmentOptions.Center);
-        Place(body.rectTransform, new Vector2(0f, 10f), new Vector2(1080f, 330f));
+            26, (Color)HudArt.White, TextAlignmentOptions.Center, 16f);
+        HudUI.Place(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(880f, 280f));
 
-        Button b = MakeButton(frame.transform, "GÖREVE BAŞLA", new Vector2(0f, -235f), new Vector2(460f, 90f), out _);
-        b.onClick.AddListener(StartMission);
+        Button b = HudUI.MakeButton(frame.transform, "StartMission", "GÖREVE BAŞLA", 30,
+            HudArt.Green, new Color32(14, 60, 34, 255), (Color)HudArt.White, StartMission, out _);
+        HudUI.Place((RectTransform)b.transform, new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(420f, 76f));
     }
 
     private void StartMission()
@@ -424,161 +383,33 @@ public class TutorialManager : MonoBehaviour
 
     private void BuildUI()
     {
-        if (EventSystem.current == null && FindFirstObjectByType<EventSystem>() == null)
-            new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+        HudUI.EnsureEventSystem();
+        canvas = HudUI.MakeCanvas("TutorialCanvas", 450);
+        Transform ct = canvas.transform;
 
-        GameObject cgo = new GameObject("TutorialCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        canvas = cgo.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 450;
-        CanvasScaler scaler = cgo.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f;
+        // Görev kutusu (sağ üst, HUD temasında): başlık + hedef, ikisi de kutunun içinde hizalı
+        Image obj = HudUI.Panel(ct, "Objective", HudArt.CyanMid);
+        HudUI.Place(obj.rectTransform, new Vector2(1f, 1f), new Vector2(-24f, -20f), new Vector2(480f, 96f));
+        HudUI.Accent(obj.transform, (Color)HudArt.Cyan, 70f);
+        objectiveRoot = obj.gameObject;
 
-        // Görev kutusu (sağ üst — üst ortadaki tur sırası çubuğuyla çakışmasın)
-        objectiveRoot = MakePanel(cgo.transform, "Objective", new Color(0.02f, 0.08f, 0.12f, 0.88f));
-        RectTransform or = objectiveRoot.GetComponent<RectTransform>();
-        or.anchorMin = or.anchorMax = new Vector2(1f, 1f);
-        or.pivot = new Vector2(1f, 1f);
-        or.anchoredPosition = new Vector2(-24f, -20f);
-        or.sizeDelta = new Vector2(540f, 104f);
-        AddOutline(objectiveRoot, Cyan);
-        objectiveRoot.GetComponent<Image>().raycastTarget = false;
-        objectiveTitle = MakeText(objectiveRoot.transform, "Title", "", 22, Cyan, TextAlignmentOptions.Left);
-        Place(objectiveTitle.rectTransform, new Vector2(0f, 22f), new Vector2(500f, 36f));
+        objectiveTitle = (TextMeshProUGUI)HudUI.Text(obj.transform, "Title", "", 18, (Color)HudArt.Cyan,
+                                                     TextAlignmentOptions.MidlineLeft, 12f);
         objectiveTitle.fontStyle = FontStyles.Bold;
-        objectiveText = MakeText(objectiveRoot.transform, "Text", "", 23, Color.white, TextAlignmentOptions.Left);
-        Place(objectiveText.rectTransform, new Vector2(0f, -18f), new Vector2(500f, 44f));
+        objectiveTitle.textWrappingMode = TextWrappingModes.NoWrap;
+        HudUI.Stretch(objectiveTitle.rectTransform, 22f, 18f, 12f, 58f);
+
+        objectiveText = (TextMeshProUGUI)HudUI.Text(obj.transform, "Text", "", 22, (Color)HudArt.White,
+                                                    TextAlignmentOptions.MidlineLeft, 14f);
+        HudUI.Stretch(objectiveText.rectTransform, 22f, 18f, 40f, 12f);
         objectiveRoot.SetActive(false);
 
-        // Sağ üstte her zaman erişilebilir "Eğitimi Geç" butonu
-        Button skipCornerBtn = MakeButton(cgo.transform, "EĞİTİMİ GEÇ >>", Vector2.zero, new Vector2(220f, 48f), out TextMeshProUGUI skipCornerLabel);
-        skipCornerLabel.fontSize = 20f;
-        RectTransform scr = skipCornerBtn.GetComponent<RectTransform>();
-        scr.anchorMin = scr.anchorMax = new Vector2(1f, 1f);
-        scr.pivot = new Vector2(1f, 1f);
-        scr.anchoredPosition = new Vector2(-24f, -134f);
-        skipCornerBtn.onClick.AddListener(StartMission);
+        // Görev kutusunun altında her zaman erişilebilir "Eğitimi Geç" butonu
+        Button skip = HudUI.MakeButton(ct, "SkipTutorial", "EĞİTİMİ GEÇ >>", 20,
+            new Color32(150, 92, 18, 255), new Color32(40, 26, 8, 235), (Color)HudArt.Amber, StartMission, out _);
+        HudUI.Place((RectTransform)skip.transform, new Vector2(1f, 1f), new Vector2(-24f, -126f), new Vector2(220f, 50f));
 
-        // Diyalog: ekranın sağında dikey bir kutu. Arkasındaki şeffaf katman haritaya ve kartlara
-        // tıklamayı engeller ama ekranı karartmaz; oyun alanı görünür kalır.
-        dialogRoot = MakePanel(cgo.transform, "Dialog", new Color(0f, 0f, 0f, 0f));
-        Stretch(dialogRoot.GetComponent<RectTransform>());
-
-        const float boxW = 440f, boxH = 620f;
-        GameObject box = MakePanel(dialogRoot.transform, "Box", new Color(0.03f, 0.1f, 0.14f, 0.96f));
-        RectTransform br = box.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = new Vector2(1f, 0.5f);
-        br.pivot = new Vector2(1f, 0.5f);
-        br.anchoredPosition = new Vector2(-24f, 30f);
-        br.sizeDelta = new Vector2(boxW, boxH);
-        AddOutline(box, Cyan);
-
-        // Üst: portre + konuşan
-        GameObject portrait = MakePanel(box.transform, "Portrait", new Color(0.06f, 0.2f, 0.26f, 1f));
-        Place(portrait.GetComponent<RectTransform>(), new Vector2(-150f, 240f), new Vector2(96f, 96f));
-        AddOutline(portrait, Cyan);
-        TextMeshProUGUI eye = MakeText(portrait.transform, "Eye", "PH", 44, Cyan, TextAlignmentOptions.Center);
-        Place(eye.rectTransform, Vector2.zero, new Vector2(96f, 96f));
-
-        dialogSpeaker = MakeText(box.transform, "Speaker", Speaker, 20, Cyan, TextAlignmentOptions.MidlineLeft);
-        dialogSpeaker.fontStyle = FontStyles.Bold;
-        Place(dialogSpeaker.rectTransform, new Vector2(58f, 240f), new Vector2(290f, 90f));
-
-        GameObject divider = MakePanel(box.transform, "Divider", new Color(Cyan.r, Cyan.g, Cyan.b, 0.45f));
-        divider.GetComponent<Image>().raycastTarget = false;
-        Place(divider.GetComponent<RectTransform>(), new Vector2(0f, 180f), new Vector2(boxW - 40f, 3f));
-
-        // Orta: metin (uzun sayfalarda yazı kutuya sığacak kadar küçülür)
-        dialogBody = MakeText(box.transform, "Body", "", 24, Color.white, TextAlignmentOptions.TopLeft);
-        dialogBody.enableAutoSizing = true;
-        dialogBody.fontSizeMin = 16f;
-        dialogBody.fontSizeMax = 24f;
-        Place(dialogBody.rectTransform, new Vector2(0f, -10f), new Vector2(boxW - 50f, 360f));
-
-        // Alt: devam butonu tam genişlik, altında eğitimi geç + kısayol ipucu
-        Button next = MakeButton(box.transform, "DEVAM >>", new Vector2(0f, -232f), new Vector2(boxW - 50f, 58f), out dialogButtonLabel);
-        next.onClick.AddListener(() => continuePressed = true);
-
-        Button skipDialogBtn = MakeButton(box.transform, "EĞİTİMİ GEÇ", new Vector2(-95f, -286f), new Vector2(200f, 38f), out TextMeshProUGUI skipDialogLabel);
-        skipDialogLabel.color = new Color(1f, 0.82f, 0.45f);
-        skipDialogLabel.fontSize = 18f;
-        skipDialogBtn.onClick.AddListener(StartMission);
-
-        TextMeshProUGUI hint = MakeText(box.transform, "Hint", "Boşluk / Enter", 16, new Color(0.6f, 0.75f, 0.8f), TextAlignmentOptions.Right);
-        Place(hint.rectTransform, new Vector2(100f, -286f), new Vector2(180f, 30f));
-
-        dialogRoot.SetActive(false);
-    }
-
-    private static GameObject MakePanel(Transform parent, string name, Color color)
-    {
-        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(parent, false);
-        go.GetComponent<Image>().color = color;
-        return go;
-    }
-
-    private static void Stretch(RectTransform r)
-    {
-        r.anchorMin = Vector2.zero;
-        r.anchorMax = Vector2.one;
-        r.offsetMin = Vector2.zero;
-        r.offsetMax = Vector2.zero;
-    }
-
-    private static void Place(RectTransform r, Vector2 pos, Vector2 size)
-    {
-        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f);
-        r.pivot = new Vector2(0.5f, 0.5f);
-        r.anchoredPosition = pos;
-        r.sizeDelta = size;
-    }
-
-    private static void AddOutline(GameObject go, Color color)
-    {
-        Outline o = go.AddComponent<Outline>();
-        o.effectColor = new Color(color.r, color.g, color.b, 0.9f);
-        o.effectDistance = new Vector2(3f, -3f);
-    }
-
-    private static TextMeshProUGUI MakeText(Transform parent, string name, string text, float size, Color color, TextAlignmentOptions align)
-    {
-        GameObject go = new GameObject(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        TextMeshProUGUI t = go.AddComponent<TextMeshProUGUI>();
-        RuntimeArt.ApplyPixelFont(t);
-        t.text = text;
-        t.fontSize = size;
-        t.color = color;
-        t.alignment = align;
-        t.textWrappingMode = TextWrappingModes.Normal;
-        t.raycastTarget = false;
-        return t;
-    }
-
-    private static Button MakeButton(Transform parent, string label, Vector2 pos, Vector2 size, out TextMeshProUGUI labelText)
-    {
-        GameObject go = new GameObject("Button", typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        Place(go.GetComponent<RectTransform>(), pos, size);
-        Image img = go.GetComponent<Image>();
-        img.color = new Color(0.05f, 0.2f, 0.26f, 1f);
-
-        Button b = go.GetComponent<Button>();
-        b.targetGraphic = img;
-        ColorBlock cb = b.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(0.6f, 1f, 1f);
-        cb.pressedColor = new Color(0.4f, 0.8f, 0.8f);
-        cb.fadeDuration = 0.05f;
-        b.colors = cb;
-        AddOutline(go, Cyan);
-
-        labelText = MakeText(go.transform, "Label", label, 26, Color.white, TextAlignmentOptions.Center);
-        labelText.fontStyle = FontStyles.Bold;
-        Place(labelText.rectTransform, Vector2.zero, size);
-        return b;
+        // Diyalog: ekranın altında alt yazı kutusu (HUD temasında). Tıklamaları engellemez.
+        subtitle = SubtitleBox.Create(ct);
     }
 }

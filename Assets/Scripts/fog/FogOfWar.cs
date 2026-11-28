@@ -207,6 +207,9 @@ public class FogOfWar : MonoBehaviour
     public bool IsHiddenEntrance(Vector2Int cell)
     {
         if (!ready || !HiddenCell(cell.x, cell.y)) return false;
+        // Girişte yumuşak açılan koridor kareleri de tıklanabilir (görünüp de girilemeyen kare kalmasın).
+        int i = cell.y * w + cell.x;
+        if (!blocked[i] && entranceGlow.ContainsKey(i)) return true;
         return VisibleAt(cell.x + 1, cell.y) || VisibleAt(cell.x - 1, cell.y)
             || VisibleAt(cell.x, cell.y + 1) || VisibleAt(cell.x, cell.y - 1);
     }
@@ -235,6 +238,19 @@ public class FogOfWar : MonoBehaviour
     }
 
     public void Refresh() { forceRefresh = true; hasLastBox = false; }
+
+    /// <summary>
+    /// Tek bir karenin görüş engelini grid'den yeniden okur (varil patlayınca, hurda yığını aranınca...).
+    /// Yoksa sis, kalkan engelin arkasını göstermeden takılı kalıyordu.
+    /// </summary>
+    public void UpdateBlocker(Vector2Int cell)
+    {
+        if (gm == null || blocked == null || !InGrid(cell.x, cell.y)) return;
+        Node n = gm.GetNode(cell);
+        blocked[cell.y * w + cell.x] = n == null || !n.isWalkable;
+        forceRefresh = true;
+        hasLastBox = false;
+    }
 
     public void RebuildBlockers()
     {
